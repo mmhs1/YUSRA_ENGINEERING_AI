@@ -8,7 +8,7 @@ import { useLoading } from './context/LoadingContext';
 import { SkeletonLoader } from './components/SkeletonLoader';
 import { AIResponse } from './components/AIResponse';
 import { useDarkMode } from './hooks/useDarkMode';
-import { Sparkles, Send, Moon, Sun, Clock, TerminalSquare } from 'lucide-react';
+import { Sparkles, Send, Moon, Sun, Clock, TerminalSquare, Trash2, Download } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 interface HistoryItem {
@@ -67,6 +67,22 @@ export default function App() {
     setCurrentResult(item.response);
   };
 
+  const clearHistory = () => {
+    setHistory([]);
+    setCurrentResult(null);
+  };
+
+  const downloadHistory = () => {
+    if (history.length === 0) return;
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(history, null, 2));
+    const downloadAnchorNode = document.createElement('a');
+    downloadAnchorNode.setAttribute("href", dataStr);
+    downloadAnchorNode.setAttribute("download", "ai_history.json");
+    document.body.appendChild(downloadAnchorNode);
+    downloadAnchorNode.click();
+    downloadAnchorNode.remove();
+  };
+
   return (
     <div className="flex h-screen bg-neutral-50 dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 font-sans transition-colors duration-200 selection:bg-neutral-200 dark:selection:bg-neutral-700">
       
@@ -97,6 +113,24 @@ export default function App() {
               ))
             )}
           </div>
+        </div>
+        <div className="p-4 border-t border-neutral-200 dark:border-neutral-800 flex flex-col gap-2">
+          <button
+            onClick={downloadHistory}
+            disabled={history.length === 0}
+            className="w-full flex items-center justify-center gap-2 py-2 px-3 text-sm font-medium rounded-lg text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Download className="w-4 h-4" />
+            Download JSON
+          </button>
+          <button
+            onClick={clearHistory}
+            disabled={history.length === 0}
+            className="w-full flex items-center justify-center gap-2 py-2 px-3 text-sm font-medium rounded-lg text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Trash2 className="w-4 h-4" />
+            Clear History
+          </button>
         </div>
       </aside>
 

@@ -15,6 +15,21 @@ export function AIResponse({ response }: AIResponseProps) {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const tokens = response.split(/(\s+)/);
+
+  const container = {
+    hidden: { opacity: 0 },
+    visible: { 
+      opacity: 1, 
+      transition: { staggerChildren: 0.02 } 
+    }
+  };
+
+  const item = {
+    hidden: { opacity: 0, y: 5 },
+    visible: { opacity: 1, y: 0 }
+  };
+
   return (
     <motion.div 
       initial={{ opacity: 0, y: 10 }}
@@ -35,9 +50,23 @@ export function AIResponse({ response }: AIResponseProps) {
         </div>
         <div className="pt-2 border-b border-transparent w-full">
           <h3 className="font-medium mb-2 leading-none dark:text-neutral-100">AI Assistant</h3>
-          <p className="text-neutral-600 dark:text-neutral-300 leading-relaxed whitespace-pre-wrap">
-            {response}
-          </p>
+          <motion.p 
+            variants={container}
+            initial="hidden"
+            animate="visible"
+            className="text-neutral-600 dark:text-neutral-300 leading-relaxed whitespace-pre-wrap"
+          >
+            {tokens.map((token, i) => {
+              if (/\s+/.test(token)) {
+                return String(token);
+              }
+              return (
+                <motion.span key={i} variants={item} className="inline-block">
+                  {token}
+                </motion.span>
+              );
+            })}
+          </motion.p>
         </div>
       </div>
     </motion.div>
