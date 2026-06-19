@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, FormEvent } from 'react';
+import { useState, FormEvent, useRef, useEffect } from 'react';
 import { useLoading } from './context/LoadingContext';
 import { SkeletonLoader } from './components/SkeletonLoader';
 import { AIResponse } from './components/AIResponse';
@@ -16,6 +16,13 @@ interface HistoryItem {
   response: string;
 }
 
+const SUGGESTIONS = [
+  "Summarize this text",
+  "Explain this concept",
+  "Generate a creative story",
+  "Help me brainstorm"
+];
+
 export default function App() {
   const { isLoading, setIsLoading } = useLoading();
   const { isDarkMode, toggleDarkMode } = useDarkMode();
@@ -23,6 +30,15 @@ export default function App() {
   const [prompt, setPrompt] = useState('');
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [currentResult, setCurrentResult] = useState<string | null>(null);
+
+  const MAX_CHARS = 500;
+  const bottomRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (currentResult || isLoading) {
+      bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [currentResult, isLoading]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -99,7 +115,7 @@ export default function App() {
         </header>
 
         {/* Output Area */}
-        <div className="flex-1 overflow-y-auto w-full p-4 md:p-8 flex flex-col items-center pb-32">
+        <div className="flex-1 overflow-y-auto w-full p-4 md:p-8 flex flex-col items-center pb-40">
           {!isLoading && !currentResult && (
             <div className="mt-20 text-center flex flex-col items-center">
               <div className="w-16 h-16 bg-neutral-100 dark:bg-neutral-800 rounded-2xl flex items-center justify-center mb-6">
@@ -134,10 +150,27 @@ export default function App() {
               </motion.div>
             )}
           </AnimatePresence>
+          <div ref={bottomRef} className="h-4 w-full shrink-0" />
         </div>
 
         {/* Input Area */}
-        <div className="absolute bottom-0 w-full bg-gradient-to-t from-neutral-50 dark:from-neutral-900 via-neutral-50 dark:via-neutral-900 to-transparent pt-10 pb-8 px-4 flex justify-center">
+        <div className="absolute bottom-0 w-full bg-gradient-to-t from-neutral-50 dark:from-neutral-900 via-neutral-50 dark:via-neutral-900 to-transparent pt-10 pb-8 px-4 flex flex-col items-center">
+          
+          {/* Suggestion Chips */}
+          <div className="w-full max-w-2xl flex gap-2 overflow-x-auto hide-scrollbar mb-3 pb-1">
+            {SUGGESTIONS.map((suggestion, idx) => (
+              <button
+                key={idx}
+                type="button"
+                onClick={() => setPrompt(suggestion)}
+                disabled={isLoading}
+                className="whitespace-nowrap px-3 py-1.5 text-sm bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-full hover:bg-neutral-50 dark:hover:bg-neutral-700 transition-colors text-neutral-600 dark:text-neutral-300 disabled:opacity-50"
+              >
+                {suggestion}
+              </button>
+            ))}
+          </div>
+
           <form 
             onSubmit={handleSubmit}
             className="w-full max-w-2xl relative shadow-lg rounded-2xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 transition-colors focus-within:ring-2 focus-within:ring-neutral-900 dark:focus-within:ring-neutral-100"
@@ -146,10 +179,16 @@ export default function App() {
               type="text"
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
+              maxLength={MAX_CHARS}
               placeholder="Enter your prompt here..."
               disabled={isLoading}
-              className="w-full py-4 pl-6 pr-14 rounded-2xl bg-transparent outline-none text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 disabled:opacity-50"
+              className="w-full py-4 pl-6 pr-24 rounded-2xl bg-transparent outline-none text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 disabled:opacity-50"
             />
+            {/* Character Count */}
+            <div className="absolute right-14 top-1/2 -translate-y-1/2 text-xs text-neutral-400 font-mono pointer-events-none">
+              {prompt.length}/{MAX_CHARS}
+            </div>
+
             <button
               type="submit"
               disabled={!prompt.trim() || isLoading}
