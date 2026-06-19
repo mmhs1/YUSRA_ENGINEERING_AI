@@ -58,18 +58,16 @@ export default function App() {
     }
   }, [history.length, isLoading]);
 
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    if (!prompt.trim() || isLoading) return;
+  const generateResponse = async (promptText: string) => {
+    if (!promptText.trim() || isLoading) return;
 
-    const currentPrompt = prompt;
     setPrompt('');
     setIsLoading(true);
 
     // Simulate AI API delay
     await new Promise(resolve => setTimeout(resolve, 2000));
 
-    const simulatedResponse = `Analyzing prompt: "${currentPrompt}"\n\nThis is a simulated **AI response** tailored to your query.\n\n### Formatted output\nData processing modules indicate:\n1. Cohesive layout\n2. Dark mode enhances ergonomics\n\n\`\`\`javascript\nconsole.log("Hello Output");\n\`\`\``;
+    const simulatedResponse = `Analyzing prompt: "${promptText}"\n\nThis is a simulated **AI response** tailored to your query.\n\n### Formatted output\nData processing modules indicate:\n1. Cohesive layout\n2. Dark mode enhances ergonomics\n\n\`\`\`javascript\nconsole.log("Hello Output");\n\`\`\``;
     
     setIsLoading(false);
     playPing();
@@ -80,8 +78,13 @@ export default function App() {
     }
     
     setHistory(prev => {
-      return [{ prompt: currentPrompt, response: simulatedResponse }, ...prev];
+      return [{ prompt: promptText, response: simulatedResponse }, ...prev];
     });
+  };
+
+  const handleSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    generateResponse(prompt);
   };
 
   const selectHistory = (item: HistoryItem) => {
@@ -208,18 +211,28 @@ export default function App() {
                 <p className="text-sm text-neutral-500 dark:text-neutral-500 italic">No history yet.</p>
               ) : (
                 history.map((item, index) => (
-                <button
-                  key={index}
-                  onClick={() => selectHistory(item)}
-                  className="w-full text-left p-3 rounded-lg text-sm bg-neutral-50 hover:bg-neutral-100 dark:bg-neutral-900 dark:hover:bg-neutral-800 transition-colors border border-transparent hover:border-neutral-200 dark:hover:border-neutral-700 flex flex-col gap-1.5"
-                  title={item.prompt}
-                >
-                  <span className="truncate w-full block font-medium text-neutral-800 dark:text-neutral-200">{item.prompt}</span>
-                  <div className="flex items-center gap-1.5 text-xs text-neutral-500 dark:text-neutral-400">
-                    <Clock className="w-3 h-3" />
-                    <span>{getReadingTime(item.response)}</span>
+                  <div key={index} className="flex gap-1 group">
+                    <button
+                      onClick={() => selectHistory(item)}
+                      className="flex-1 text-left p-3 rounded-lg text-sm bg-neutral-50 hover:bg-neutral-100 dark:bg-neutral-900 dark:hover:bg-neutral-800 transition-colors border border-transparent hover:border-neutral-200 dark:hover:border-neutral-700 flex flex-col gap-1.5 focus:outline-none focus:ring-2 focus:ring-neutral-200 dark:focus:ring-neutral-700"
+                      title={item.prompt}
+                    >
+                      <span className="truncate w-full block font-medium text-neutral-800 dark:text-neutral-200">{item.prompt}</span>
+                      <div className="flex items-center gap-1.5 text-xs text-neutral-500 dark:text-neutral-400">
+                        <Clock className="w-3 h-3" />
+                        <span>{getReadingTime(item.response)}</span>
+                      </div>
+                    </button>
+                    <button 
+                      onClick={() => {
+                        setPrompt(item.prompt);
+                      }} 
+                      className="p-2 opacity-0 group-hover:opacity-100 text-neutral-400 hover:text-indigo-500 transition-all rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-900/20 shrink-0 self-start"
+                      title="Edit original prompt"
+                    >
+                      <span className="text-xs font-medium">Edit</span>
+                    </button>
                   </div>
-                </button>
               ))
             )}
           </div>
@@ -303,7 +316,10 @@ export default function App() {
                   <div className="self-end bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900 px-5 py-3 rounded-2xl max-w-[85%] rounded-tr-sm shadow-sm">
                     {item.prompt}
                   </div>
-                  <AIResponse response={item.response} />
+                  <AIResponse 
+                    response={item.response} 
+                    onRetry={() => generateResponse(item.prompt)}
+                  />
                 </motion.div>
               ))}
             </AnimatePresence>

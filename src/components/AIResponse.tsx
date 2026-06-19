@@ -1,15 +1,52 @@
-import { Sparkles, Copy, Check, Clock, ChevronDown, ChevronUp, BotMessageSquare } from 'lucide-react';
+import { Sparkles, Copy, Check, Clock, ChevronDown, ChevronUp, BotMessageSquare, FileText, RefreshCw } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useState } from 'react';
 import { getReadingTime } from '../utils/readingTime';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
+const CodeBlock = ({ node, inline, className, children, ...props }: any) => {
+  const [isCopied, setIsCopied] = useState(false);
+  const match = /language-(\w+)/.exec(className || '');
+  const isInline = inline || !match;
+
+  const handleCopyCode = () => {
+    navigator.clipboard.writeText(String(children).replace(/\n$/, ''));
+    setIsCopied(true);
+    setTimeout(() => setIsCopied(false), 2000);
+  };
+
+  if (isInline) {
+    return <code className={className} {...props}>{children}</code>;
+  }
+
+  return (
+    <div className="relative group/code mt-4 mb-4 rounded-lg overflow-hidden bg-neutral-900 border border-neutral-700">
+      <div className="flex items-center justify-between px-4 py-1.5 bg-neutral-800 border-b border-neutral-700">
+        <span className="text-xs text-neutral-400 font-mono">{match?.[1] || 'code'}</span>
+        <button
+          onClick={handleCopyCode}
+          className="text-neutral-400 hover:text-white transition-colors p-1"
+          title="Copy code"
+        >
+          {isCopied ? <Check className="w-3.5 h-3.5 text-green-500" /> : <Copy className="w-3.5 h-3.5" />}
+        </button>
+      </div>
+      <div className="p-4 overflow-x-auto text-sm text-neutral-100 font-mono">
+        <code className={className} {...props}>
+          {children}
+        </code>
+      </div>
+    </div>
+  );
+};
+
 interface AIResponseProps {
   response: string;
+  onRetry?: () => void;
 }
 
-export function AIResponse({ response }: AIResponseProps) {
+export function AIResponse({ response, onRetry }: AIResponseProps) {
   const [copied, setCopied] = useState(false);
   const [expanded, setExpanded] = useState(true);
 
@@ -20,6 +57,7 @@ export function AIResponse({ response }: AIResponseProps) {
   };
 
   const readingTime = getReadingTime(response);
+  const wordCount = response.trim().split(/\s+/).length;
 
   return (
     <motion.div 
@@ -66,7 +104,7 @@ export function AIResponse({ response }: AIResponseProps) {
                   className="text-neutral-600 dark:text-neutral-300 leading-relaxed py-1"
                 >
                   <div className="markdown-body prose dark:prose-invert max-w-none">
-                    <Markdown remarkPlugins={[remarkGfm]}>{response}</Markdown>
+                    <Markdown remarkPlugins={[remarkGfm]} components={{ code: CodeBlock }}>{response}</Markdown>
                   </div>
                 </motion.div>
               </motion.div>
@@ -80,10 +118,24 @@ export function AIResponse({ response }: AIResponseProps) {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="border-t border-neutral-100 dark:border-neutral-700 mt-4 pt-3 flex items-center gap-1.5 text-xs text-neutral-400 dark:text-neutral-500 ml-[56px]"
+          className="border-t border-neutral-100 dark:border-neutral-700 mt-4 pt-3 flex items-center justify-between text-xs text-neutral-400 dark:text-neutral-500 ml-[56px]"
         >
-          <Clock className="w-3.5 h-3.5" />
-          <span>{readingTime}</span>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-1.5">
+              <Clock className="w-3.5 h-3.5" />
+              <span>{readingTime}</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <FileText className="w-3.5 h-3.5" />
+              <span>{wordCount} words</span>
+            </div>
+          </div>
+          {onRetry && (
+            <button onClick={onRetry} className="flex items-center gap-1.5 hover:text-neutral-900 dark:hover:text-neutral-100 transition-colors">
+              <RefreshCw className="w-3.5 h-3.5" />
+              <span>Retry</span>
+            </button>
+          )}
         </motion.div>
       )}
     </motion.div>
