@@ -1,0 +1,40 @@
+{
+  "project": "Yusra Engineering Ai",
+  "version": "0.1.0-draft",
+  "sections": [
+    {
+      "id": "1",
+      "title": "Title and metadata",
+      "status": "pending",
+      "checklist": [
+        {
+          "id": "1.1",
+          "item": "Project name, author, version, date, contact, short description are present.",
+          "passed": false
+        },
+        {
+          "id": "1.2",
+          "item": "Persona phrase is included verbatim.",
+          "passed": false
+        },
+        {
+          "id": "1.3",
+          "item": "Document versioning and changelog stub are present.",
+          "passed": false
+        }
+      ]
+    },
+    {
+      "id": "2",
+      "title": "Executive summary",
+      "status": "pending",
+      "checklist": [
+        {
+          "id": "2.1",
+          "item": "One-paragraph purpose, scope, and constraints.",
+          "passed": false
+        }
+      ]
+    }
+  ]
+}
