@@ -13,6 +13,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { getReadingTime } from './utils/readingTime';
 import { jsPDF } from 'jspdf';
 import { IntroModal } from './components/IntroModal';
+import { playPing } from './utils/audio';
 
 interface HistoryItem {
   prompt: string;
@@ -38,10 +39,10 @@ export default function App() {
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (currentResult || isLoading) {
+    if (history.length > 0 || isLoading) {
       bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [currentResult, isLoading]);
+  }, [history.length, isLoading]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -50,24 +51,30 @@ export default function App() {
     const currentPrompt = prompt;
     setPrompt('');
     setIsLoading(true);
-    setCurrentResult(null);
 
     // Simulate AI API delay
     await new Promise(resolve => setTimeout(resolve, 2000));
 
     const simulatedResponse = `Analyzing prompt: "${currentPrompt}"\n\nThis is a simulated AI response tailored to your query. Data processing modules indicate that incorporating a cohesive layout with dark mode significantly enhances developer ergonomics and user satisfaction.`;
     
-    setCurrentResult(simulatedResponse);
     setIsLoading(false);
+    playPing();
     
     setHistory(prev => {
-      const newHistory = [{ prompt: currentPrompt, response: simulatedResponse }, ...prev];
-      return newHistory.slice(0, 5); // Keep only last 5 items
+      return [{ prompt: currentPrompt, response: simulatedResponse }, ...prev];
     });
   };
 
   const selectHistory = (item: HistoryItem) => {
-    setCurrentResult(item.response);
+    // If we click a history item on sidebar, maybe populate the input, or do nothing.
+    // Assuming we just want to jump to it visually, but since we map over `history`,
+    // the index might be hard to guess if reversed.
+    // Let's scroll to the item.
+    const index = history.findIndex(i => i === item);
+    if (index !== -1) {
+      const reversedIndex = history.length - 1 - index;
+      document.getElementById(`history-item-${reversedIndex}`)?.scrollIntoView({ behavior: 'smooth' });
+    }
   };
 
   const clearHistory = () => {
@@ -196,7 +203,7 @@ export default function App() {
 
         {/* Output Area */}
         <div className="flex-1 overflow-y-auto w-full p-4 md:p-8 flex flex-col items-center pb-40">
-          {!isLoading && !currentResult && (
+          {history.length === 0 && !isLoading && (
             <div className="mt-20 text-center flex flex-col items-center">
               <div className="w-16 h-16 bg-neutral-100 dark:bg-neutral-800 rounded-2xl flex items-center justify-center mb-6">
                 <Sparkles className="w-8 h-8 text-neutral-400" />
@@ -208,28 +215,36 @@ export default function App() {
             </div>
           )}
 
-          <AnimatePresence mode="popLayout">
+          <div className="w-full max-w-2xl flex flex-col gap-6 w-full mt-8">
+            <AnimatePresence initial={false}>
+              {history.slice().reverse().map((item, index) => (
+                <motion.div 
+                  key={index} 
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="flex flex-col gap-4"
+                  id={`history-item-${index}`}
+                >
+                  <div className="self-end bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900 px-5 py-3 rounded-2xl max-w-[85%] rounded-tr-sm shadow-sm">
+                    {item.prompt}
+                  </div>
+                  <AIResponse response={item.response} />
+                </motion.div>
+              ))}
+            </AnimatePresence>
+
             {isLoading && (
               <motion.div 
                 key="loading"
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95 }}
-                className="w-full mt-8 flex justify-center"
+                className="w-full flex justify-center"
               >
                 <SkeletonLoader />
               </motion.div>
             )}
-
-            {!isLoading && currentResult && (
-              <motion.div 
-                key="result"
-                className="w-full mt-8 flex justify-center"
-              >
-                <AIResponse response={currentResult} />
-              </motion.div>
-            )}
-          </AnimatePresence>
+          </div>
           <div ref={bottomRef} className="h-4 w-full shrink-0" />
         </div>
 
