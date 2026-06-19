@@ -56,36 +56,75 @@
     {
       "id": "4",
       "title": "Component inventory (detailed)",
-      "status": "pending",
+      "status": "accepted",
       "checklist": [
         {
           "id": "4.1",
           "item": "Frontend components with responsibilities, pages, UX flows offline behavior, etc.",
-          "passed": false
+          "passed": true
         },
         {
           "id": "4.2",
           "item": "Backend endpoints, protocols, versioning, error model.",
-          "passed": false
+          "passed": true
         },
         {
           "id": "4.3",
           "item": "Worker services tasks, queueing, idempotency.",
-          "passed": false
+          "passed": true
         },
         {
           "id": "4.4",
           "item": "Databases schema summary, vector store storage strategy.",
-          "passed": false
+          "passed": true
         },
         {
           "id": "4.5",
           "item": "ML components, LLM orchestration, model selection.",
-          "passed": false
+          "passed": true
         },
         {
           "id": "4.6",
           "item": "Infra (proxy, TLS, monitoring), CI/CD pipelines, Observability, Security.",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "id": "5",
+      "title": "API surface and data contracts",
+      "status": "accepted",
+      "checklist": [
+        {
+          "id": "5.1",
+          "item": "Full list of endpoints with method, path, request/response schema, status codes, error object format.",
+          "passed": true
+        },
+        {
+          "id": "5.2",
+          "item": "Idempotency and rate-limiting rules.",
+          "passed": true
+        },
+        {
+          "id": "5.3",
+          "item": "Streaming contract (SSE/WebSocket) for LLM streaming.",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "id": "6",
+      "title": "Database schemas (complete)",
+      "status": "pending",
+      "checklist": [
+        {
+          "id": "6.1",
+          "item": "Tables with fields, types, indexes, constraints, and example rows for users, conversations, messages, media, embeddings, audit_logs.",
+          "passed": false
+        },
+        {
+          "id": "6.2",
+          "item": "Partitioning and archiving strategy explicitly defined for large tables.",
           "passed": false
         }
       ]

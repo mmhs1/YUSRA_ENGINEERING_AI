@@ -129,6 +129,226 @@ Acceptance Checklist for Section 4:
 
 Reviewer Sign-off (Section 4):
 ------------------------------
+Reviewer Name: Mohammad Maynul Shaon
+Timestamp (UTC): 2026-06-19T01:57:29Z
+Status: ACCEPTED
+
+5. API surface and data contracts
+---------------------------------
+
+Global Error Object Format:
+{
+  "error": {
+    "code": 401,
+    "type": "UNAUTHORIZED_ACCESS",
+    "message": "Valid JWT token is required",
+    "details": [] 
+  }
+}
+
+Global Rate-Limiting Rules:
+- General endpoints: 100 requests per IP per minute.
+- Auth / High-risk endpoints: 5 requests per IP per minute.
+- Rate-Limit headers injected: X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset.
+
+Global Idempotency Rules:
+- All POST/PUT/DELETE payload-heavy operations require an `Idempotency-Key` header (UUIDv4).
+- The API Gateway stores idempotency keys and their serialized responses in Redis for 24 hours.
+
+REST Endpoints:
+
+1. POST /api/v1/auth/register
+   - Request schema: { "email": "string(email)", "password": "string(min:8)", "name": "string" }
+   - Response schema: { "token": "string(JWT)", "user": { "id": "uuid", "email": "string", "name": "string", "role": "USER" } }
+   - Status codes: 200 OK, 400 Bad Request
+   - Example Test Case:
+     Input: { "email": "user@example.com", "password": "password123", "name": "John Doe" }
+     Expected Output: { "token": "ey...", "user": { "id": "uuid", "email": "user@example.com", "name": "John Doe", "role": "USER" } } (Status: 200)
+
+2. POST /api/v1/auth/login
+   - Request schema: { "email": "string(email)", "password": "string" }
+   - Response schema: { "token": "string(JWT)", "user": { "id": "uuid", "email": "string", "name": "string", "role": "USER|ADMIN" } }
+   - Status codes: 200 OK, 401 Unauthorized
+   - Example Test Case:
+     Input: { "email": "test@example.com", "password": "wrong" }
+     Expected Output: { "error": { "code": 401, "type": "AUTH_FAILED", "message": "Invalid credentials", "details": [] } } (Status: 401)
+
+3. GET /api/v1/users/me
+   - Request schema: None (requires Auth Bearer token)
+   - Response schema: { "user": { "id": "uuid", "email": "string", "name": "string", "role": "string", "createdAt": "iso8601" } }
+   - Status codes: 200 OK, 401 Unauthorized, 404 Not Found
+   - Example Test Case: 
+     Input: Headers: Authorization: Bearer <valid_token>
+     Expected Output: { "user": { "id": "123", "email": "user@example.com", "name": "John", "role": "USER", "createdAt": "2026-06-18T..." } } (Status: 200)
+
+4. POST /api/v1/conversations
+   - Request schema: {} 
+   - Response schema: { "conversation": { "id": "uuid", "userId": "uuid", "title": "string|null", "createdAt": "iso8601", "updatedAt": "iso8601" } }
+   - Status codes: 201 Created, 401 Unauthorized
+   - Example Test Case:
+     Input: Headers: Authorization: Bearer <valid_token>, Idempotency-Key: <uuid>
+     Expected Output: { "conversation": { "id": "conv-123", "userId": "user-1", "title": null, "createdAt": "2026-06-18T...", "updatedAt": "2026-06-18T..." } } (Status: 201)
+
+5. GET /api/v1/conversations
+   - Request schema: None
+   - Response schema: { "conversations": [ { "id": "uuid", "title": "string|null", "updatedAt": "iso8601" } ] }
+   - Status codes: 200 OK, 401 Unauthorized
+   - Example Test Case:
+     Input: Headers: Authorization: Bearer <valid_token>
+     Expected Output: { "conversations": [] } (Status: 200)
+
+6. POST /api/v1/media/request-upload
+   - Request schema: { "filename": "string", "contentType": "string" }
+   - Response schema: { "uploadUrl": "string(url)", "uploadId": "uuid" }
+   - Status codes: 200 OK, 400 Bad Request, 401 Unauthorized
+   - Example Test Case:
+     Input: { "filename": "voice.webm", "contentType": "audio/webm" }
+     Expected Output: { "uploadUrl": "https://s3.example.com/...", "uploadId": "upload-123" } (Status: 200)
+
+7. POST /api/v1/media/complete-upload
+   - Request schema: { "url": "string", "type": "image|audio|video", "messageId": "uuid" }
+   - Response schema: { "media": { "id": "uuid", "messageId": "uuid", "url": "string", "type": "string" } }
+   - Status codes: 200 OK, 401 Unauthorized, 404 Not Found
+   - Example Test Case:
+     Input: { "url": "https://s3.example.com/voice.webm", "type": "audio", "messageId": "msg-123" }
+     Expected Output: { "media": { "id": "media-1", "messageId": "msg-123", "url": "https://s3.example.com...", "type": "audio" } } (Status: 200)
+
+Streaming Contract (Server-Sent Events) for LLM:
+------------------------------------------------
+Endpoint: POST /api/v1/conversations/:id/messages/stream
+- Description: Streams LLM responses back to the client chunk-by-chunk using SSE.
+- Headers Required: Authorization (Bearer), Accept: text/event-stream
+- Request Payload (JSON): { "content": "string", "mediaIds": ["uuid"] }
+- SSE Message Format:
+  - `event: chunk` | `data: { "text": "partial_text" }`
+  - `event: metadata` | `data: { "rag_sources": ["doc_id"] }`
+  - `event: error` | `data: { "code": 500, "message": "Failure" }`
+  - `event: done` | `data: { "messageId": "uuid", "fullText": "concat_text" }`
+- Example Test Case:
+  Input: Headers: Accept: text/event-stream; Body: { "content": "Hello Yusra" }
+  Expected Output (Stream): 
+    data: {"text": "Hello! "}
+    data: {"text": "I'm "}
+    data: {"text": "YUSRA."}
+    event: done
+    data: {"messageId": "msg-999"}
+    (Status: 200 OK)
+
+Acceptance Checklist for Section 5:
+[x] Full list of endpoints with method, path, request schema, response schema, status codes, and error object format is provided.
+[x] Idempotency and rate-limiting rules are clearly defined.
+[x] Streaming contract (SSE/WebSocket) for LLM streaming is detailed.
+[x] For each API endpoint, at least one example test case (input, expected output, status code) is included.
+
+Reviewer Sign-off (Section 5):
+------------------------------
+Reviewer Name: Mohammad Maynul Shaon
+Timestamp (UTC): 2026-06-19T01:59:18Z
+Status: ACCEPTED
+
+6. Database schemas (complete)
+------------------------------
+
+Relational Database schema (PostgreSQL)
+
+Table: users
+- Fields:
+  - id: UUID (Primary Key)
+  - email: VARCHAR(255) (Unique, Not Null)
+  - password_hash: VARCHAR(255) (Not Null)
+  - name: VARCHAR(255) (Not Null)
+  - role: ENUM('USER', 'ADMIN') (Default: 'USER')
+  - created_at: TIMESTAMP WITH TIME ZONE (Default: NOW())
+  - updated_at: TIMESTAMP WITH TIME ZONE
+- Indexes:
+  - idx_users_email (email)
+- Constraints: 
+  - email must be a valid email format.
+- Example Row:
+  - {id: "a1...", email: "user@example.com", password_hash: "$argon2...", name: "John Doe", role: "USER", created_at: "2026-06-18T10:00:00Z", updated_at: "2026-06-18T10:00:00Z"}
+
+Table: conversations
+- Fields:
+  - id: UUID (Primary Key)
+  - user_id: UUID (Foreign Key to users.id, On Delete Cascade)
+  - title: VARCHAR(255) (Nullable)
+  - created_at: TIMESTAMP WITH TIME ZONE (Default: NOW())
+  - updated_at: TIMESTAMP WITH TIME ZONE
+- Indexes:
+  - idx_conversations_user_id (user_id)
+  - idx_conversations_updated_at (updated_at)
+- Example Row:
+  - {id: "b2...", user_id: "a1...", title: "Hello Yusra", created_at: "2026-06-18T10:05:00Z", updated_at: "2026-06-18T10:05:00Z"}
+
+Table: messages
+- Fields:
+  - id: UUID (Primary Key)
+  - conversation_id: UUID (Foreign Key to conversations.id, On Delete Cascade)
+  - user_id: UUID (Foreign Key to users.id, On Delete Cascade)
+  - content: TEXT (Not Null)
+  - role: ENUM('USER', 'SYSTEM', 'ASSISTANT') (Default: 'USER')
+  - created_at: TIMESTAMP WITH TIME ZONE (Default: NOW())
+  - updated_at: TIMESTAMP WITH TIME ZONE
+- Indexes:
+  - idx_messages_conversation_id_created_at (conversation_id, created_at ASC)
+- Example Row:
+  - {id: "c3...", conversation_id: "b2...", user_id: "a1...", content: "What is your name?", role: "USER", created_at: "2026-06-18T10:06:00Z", updated_at: "2026-06-18T10:06:00Z"}
+
+Table: media
+- Fields:
+  - id: UUID (Primary Key)
+  - message_id: UUID (Foreign Key to messages.id, On Delete Cascade)
+  - url: TEXT (Not Null)
+  - type: VARCHAR(50) (Not Null) -- e.g. 'image', 'audio', 'video'
+  - created_at: TIMESTAMP WITH TIME ZONE (Default: NOW())
+  - updated_at: TIMESTAMP WITH TIME ZONE
+- Indexes:
+  - idx_media_message_id (message_id)
+- Example Row:
+  - {id: "d4...", message_id: "c3...", url: "https://s3.example.com/audio.webm", type: "audio", created_at: "2026-06-18T10:07:00Z", updated_at: "2026-06-18T10:07:00Z"}
+
+Table: embeddings (pgvector)
+- Fields:
+  - id: UUID (Primary Key)
+  - user_id: UUID (Foreign Key to users.id)
+  - reference_id: UUID (Polymorphic ID, e.g. message_id or media_id)
+  - reference_type: VARCHAR(50) (e.g. 'MESSAGE', 'SPEAKER_PROFILE')
+  - content_text: TEXT (Nullable)
+  - embedding: VECTOR(1536) (Not Null)
+  - created_at: TIMESTAMP WITH TIME ZONE (Default: NOW())
+- Indexes:
+  - idx_embeddings_user_id_ref (user_id, reference_type)
+  - HNSW index on the embedding vector column.
+- Example Row:
+  - {id: "e5...", user_id: "a1...", reference_id: "c3...", reference_type: "MESSAGE", content_text: "What is your name?", embedding: "[0.01, -0.02, ...]", created_at: "2026-06-18T10:08:00Z"}
+
+Table: audit_logs
+- Fields:
+  - id: UUID (Primary Key)
+  - user_id: UUID (Nullable, Foreign Key to users.id)
+  - action: VARCHAR(100) (Not Null)
+  - resource: VARCHAR(100) (Not Null)
+  - details: JSONB
+  - ip_address: VARCHAR(45)
+  - created_at: TIMESTAMP WITH TIME ZONE (Default: NOW())
+- Indexes:
+  - idx_audit_logs_user_id (user_id)
+  - idx_audit_logs_created_at (created_at)
+- Example Row:
+  - {id: "f6...", user_id: "a1...", action: "LOGIN_SUCCESS", resource: "AUTH", details: {"method": "password"}, ip_address: "192.168.1.1", created_at: "2026-06-18T10:00:00Z"}
+
+Partitioning and Archiving Strategy for Large Tables:
+- The `messages` and `audit_logs` tables will use PostgreSQL native declarative time-based partitioning by month (e.g. `messages_2026_06`, `audit_logs_2026_06`).
+- A cron job runs on the 1st of each month to dynamically create the next month's partition.
+- `audit_logs` partitions older than 12 months will be detached, exported as CSV/Parquet files to object storage (cold storage), and then dropped to reclaim space.
+- The `embeddings` table does not partition strictly by time, but relies on the pgvector HNSW index.
+
+Acceptance Checklist for Section 6:
+[ ] Tables with fields, types, indexes, constraints, and example rows are enumerated for users, conversations, messages, media, embeddings, audit_logs.
+[ ] Partitioning and archiving strategy is explicitly defined for large tables.
+
+Reviewer Sign-off (Section 6):
+------------------------------
 Reviewer Name: 
 Timestamp (UTC): 
 Status: [PENDING] (Awaiting 'ACCEPTED')
