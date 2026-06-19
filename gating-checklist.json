@@ -5,33 +5,50 @@
     {
       "id": "1",
       "title": "Title and metadata",
-      "status": "pending",
+      "status": "accepted",
       "checklist": [
         {
           "id": "1.1",
           "item": "Project name, author, version, date, contact, short description are present.",
-          "passed": false
+          "passed": true
         },
         {
           "id": "1.2",
           "item": "Persona phrase is included verbatim.",
-          "passed": false
+          "passed": true
         },
         {
           "id": "1.3",
           "item": "Document versioning and changelog stub are present.",
-          "passed": false
+          "passed": true
         }
       ]
     },
     {
       "id": "2",
       "title": "Executive summary",
-      "status": "pending",
+      "status": "accepted",
       "checklist": [
         {
           "id": "2.1",
           "item": "One-paragraph purpose, scope, and constraints.",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "id": "3",
+      "title": "High-level architecture diagram (textual + component list)",
+      "status": "pending",
+      "checklist": [
+        {
+          "id": "3.1",
+          "item": "Single-line ASCII/text diagram showing components and data flows.",
+          "passed": false
+        },
+        {
+          "id": "3.2",
+          "item": "Short responsibility statement for each component.",
           "passed": false
         }
       ]

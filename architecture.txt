@@ -31,6 +31,36 @@ Acceptance Checklist for Section 2:
 
 Reviewer Sign-off (Sections 1 & 2):
 -----------------------------------
+Reviewer Name: Mohammad Maynul Shaon
+Timestamp (UTC): 2026-06-19T00:48:55Z
+Status: ACCEPTED
+
+3. High-level architecture diagram (textual + component list)
+-------------------------------------------------------------
+Diagram:
+Client (PWA) <--> [CDN/WAF] <--> Reverse Proxy (Nginx) <--> API Gateway (Node.js) <--> Redis (Queue/Cache) <--> Worker Fleet (Python/Node) <--> Models (LLM/TTS/OCR)
+                                                                |                                                                 
+                                                                +-> Postgres (RDBMS) & Vector Store (pgvector/Milvus)
+                                                                |
+                                                                +-> MinIO/S3 (Object Storage)
+
+Component Inventory & Responsibilities:
+- Client (PWA/Next.js): Renders mobile-first UI, manages local caching/offline state, handles media capture, and communicates with backend via REST/WebSockets.
+- Reverse Proxy (Nginx): Terminates TLS, caches static assets, rate-limits initial connections, and routes requests to the API Gateway.
+- API Gateway (Node.js): Handles API routing, user authentication, RBAC authorization, and orchestrates synchronous operations.
+- Redis (Cache & Message Broker): Manages session tokens, rate-limiting counters, and BullMQ/RQ job queues for asynchronous and ML-related tasks.
+- Worker Fleet: Independently polls Redis queues to process heavy operations (TTS, OCR, document chunking, embeddings, and speaking verification) and writes outcomes to DB/Storage.
+- Postgres (Database): Durable relational storage for users, conversation metadata, RBAC rules, RBAC policies, and audit logs.
+- Vector Store (pgvector/Milvus): Indexes and queries embeddings for Retrieval-Augmented Generation (RAG) and semantic search over conversation histories.
+- Object Storage (MinIO/S3): Persists large unchanging files (user uploads, audio segments, generated documents).
+- ML Models: Core AI logic handling classification, summarization, TTS synthesis, embeddings generation, and conversational text-generation.
+
+Acceptance Checklist for Section 3:
+[ ] Single-line ASCII/text diagram showing components and data flows is present.
+[ ] Short responsibility statement for each component is included.
+
+Reviewer Sign-off (Section 3):
+------------------------------
 Reviewer Name: 
 Timestamp (UTC): 
 Status: [PENDING] (Awaiting 'ACCEPTED')
