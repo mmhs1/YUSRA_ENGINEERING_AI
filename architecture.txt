@@ -349,6 +349,102 @@ Acceptance Checklist for Section 6:
 
 Reviewer Sign-off (Section 6):
 ------------------------------
+Reviewer Name: Mohammad Maynul Shaon
+Timestamp (UTC): 2026-06-19T02:05:22Z
+Status: ACCEPTED
+
+7. Storage and object lifecycle
+-------------------------------
+
+Storage Service Strategy:
+The application leverages an S3-compatible object storage service (e.g., AWS S3, Cloudflare R2, MinIO for local dev) to store user-uploaded media (images, audio). The database only stores metadata and references (URLs) to these objects.
+
+Object Key Patterns:
+All uploaded objects follow a strict naming hierarchy to ensure isolation and ease of lifecycle management.
+- Pattern: `{environment}/{resource_type}/{user_id}/{year}/{month}/{uuid_v4}-{filename}`
+- Example: `production/audio/a1b2.../2026/06/f4c5...-recording.webm`
+- Example: `production/images/a1b2.../2026/06/e3d4...-photo.jpg`
+
+Signed URL Flow for Uploads and Downloads:
+Direct client-to-storage uploads are required to offload bandwidth from the API Gateway.
+1. Client requests upload: Client POSTs `/api/v1/media/request-upload` with filename and mime-type.
+2. Server validates: API validates the MIME type and file size limits.
+3. Server generates Pre-Signed URL: Server generates an upload URL (PUT) valid for 15 minutes and returns it to the client.
+4. Client uploads directly: Client PUTs the file directly to the S3 bucket using the signed URL.
+5. Client confirms upload: Client POSTs `/api/v1/media/complete-upload` containing the object reference to finalize the DB record.
+6. Downloads (Reads): Private objects generate temporary signed GET URLs when requested by authorized clients, valid for 1 hour. Publicly accessible assets (if any) are served via CDN without signed URLs.
+
+Retention and Lifecycle Rules:
+Configured directly on the S3-compatible service bucket policies.
+- Temporary / Orphaned Uploads: Objects with the prefix `temp/` or not confirmed in the DB are purged after 24 hours via a bucket lifecycle rule.
+- Deleted Accounts Media: Objects prefixed with `{environment}/{resource_type}/{user_id}/` where `user_id` matches a deleted account are tagged for deletion and purged after 30 days (soft-delete window).
+- Ephemeral Media/Audio: Raw TTS generations or intermediary normalized audio files (if not explicitly pinned) are purged after 7 days.
+
+Backup Schedule:
+- The S3 bucket utilizes cross-region replication (CRR) for disaster recovery.
+- Object Versioning is ENABLED to protect against accidental overwrites or deletions.
+- Regular DB backups refer to these retained object versions.
+
+Acceptance Checklist for Section 7:
+[ ] Object key patterns are defined.
+[ ] Signed URL flow for uploads and downloads is documented clearly.
+[ ] Retention, lifecycle rules, and backup schedules are explicitly stated.
+
+Reviewer Sign-off (Section 7):
+------------------------------
+Reviewer Name: Mohammad Maynul Shaon
+Timestamp (UTC): 2026-06-19T02:06:29Z
+Status: ACCEPTED
+
+8. Authentication and authorization
+-----------------------------------
+
+Authentication mechanism uses a dual-token strategy: short-lived Access Tokens and long-lived Refresh Tokens.
+
+1. JWT Lifecycle & Cookie vs Header Usage:
+- Access Token (JWT): Lifespan 15 minutes, signed using ES256 algorithm. Contains user ID and role claims. Delivered to the client in the login response payload and stored in memory. Sent via the `Authorization: Bearer <token>` HTTP header for all protected API requests.
+- Refresh Token: Opaque secure random string (or encrypted JWT). Lifespan 7 days. Stored in an `HttpOnly`, `Secure`, `SameSite=Strict` cookie to mitigate XSS and CSRF risks.
+- Token Rotation: The refresh token is rotated upon use. When the client calls the `/api/v1/auth/refresh` endpoint using the HTTP-only cookie, a new access token and a new refresh token are issued. The old refresh token is marked as revoked.
+
+2. OAuth Connectors:
+- System supports primary authentication via Google OAuth 2.0.
+- Flow: Client redirects to Google consent screen -> Callback to Backend -> Backend exchanges code for profile -> Backend issues local Access + Refresh token pair to the client (same as email/password flow).
+
+3. Two-Factor Authentication (2FA) Flow:
+- Method: TOTP (Time-based One-Time Password) via Authenticator apps.
+- Setup: User requests 2FA setup, server generates a secret and returns a otpauth URI / QR code. User completes setup by supplying a valid code.
+- Login Flow:
+  1. User submits email and password.
+  2. Server verifies credentials. If 2FA is enabled, returns `{ "requires2FA": true, "tempToken": "ey..." }` instead of login tokens.
+  3. User submits TOTP code and `tempToken`.
+  4. Server verifies the code, issues standard Access and Refresh tokens.
+
+4. RBAC Matrix with Exact Permissions per Role:
+The system employs Role-Based Access Control (RBAC) with two primary roles: `USER` and `ADMIN`.
+
+Role: USER
+Permissions:
+- `profile:read_own`, `profile:update_own`, `profile:delete_own`
+- `conversation:create`, `conversation:read_own`, `conversation:update_own`, `conversation:delete_own`
+- `message:create`, `message:read_own`
+- `media:upload`, `media:read_own`
+- `speaker_profile:enroll_own`, `speaker_profile:read_own`
+
+Role: ADMIN
+Permissions:
+- All USER permissions (applied system-wide).
+- `user:read_all`, `user:update_all`, `user:delete_all`
+- `system:read_settings`, `system:update_settings`
+- `audit:read_logs`
+- `metrics:view_worker_stats`
+
+Acceptance Checklist for Section 8:
+[ ] JWT lifecycle, refresh token rules, and cookie vs header usage are detailed.
+[ ] OAuth connectors and 2FA flow are explained.
+[ ] RBAC matrix with exact permissions per role is provided.
+
+Reviewer Sign-off (Section 8):
+------------------------------
 Reviewer Name: 
 Timestamp (UTC): 
 Status: [PENDING] (Awaiting 'ACCEPTED')

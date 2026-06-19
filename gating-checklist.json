@@ -115,16 +115,60 @@
     {
       "id": "6",
       "title": "Database schemas (complete)",
-      "status": "pending",
+      "status": "accepted",
       "checklist": [
         {
           "id": "6.1",
           "item": "Tables with fields, types, indexes, constraints, and example rows for users, conversations, messages, media, embeddings, audit_logs.",
-          "passed": false
+          "passed": true
         },
         {
           "id": "6.2",
           "item": "Partitioning and archiving strategy explicitly defined for large tables.",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "id": "7",
+      "title": "Storage and object lifecycle",
+      "status": "accepted",
+      "checklist": [
+        {
+          "id": "7.1",
+          "item": "Object key patterns defined.",
+          "passed": true
+        },
+        {
+          "id": "7.2",
+          "item": "Signed URL flow for uploads and downloads documented.",
+          "passed": true
+        },
+        {
+          "id": "7.3",
+          "item": "Retention, lifecycle rules, and backup schedules explicitly stated.",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "id": "8",
+      "title": "Authentication and authorization",
+      "status": "pending",
+      "checklist": [
+        {
+          "id": "8.1",
+          "item": "JWT lifecycle, refresh token rules, and cookie vs header usage detailed.",
+          "passed": false
+        },
+        {
+          "id": "8.2",
+          "item": "OAuth connectors and 2FA flow explained.",
+          "passed": false
+        },
+        {
+          "id": "8.3",
+          "item": "RBAC matrix with exact permissions per role provided.",
           "passed": false
         }
       ]
