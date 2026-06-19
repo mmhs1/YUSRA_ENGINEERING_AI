@@ -18,6 +18,7 @@ import { TemplatesModal } from '../components/TemplatesModal';
 import { useSpeechToText } from '../hooks/useSpeechToText';
 import { useNavigate } from 'react-router-dom';
 import { dbCacheHistory, dbGetCachedHistory, dbQueueMessage } from '../utils/idb';
+import { speakText, stopSpeaking } from '../utils/voiceEngine';
 
 interface HistoryItem {
   prompt: string;
@@ -30,6 +31,14 @@ const SUGGESTIONS = [
   "Explain this concept",
   "Generate a creative story",
   "Help me brainstorm"
+];
+
+const QUICK_ACTIONS = [
+  { label: "Summarize constraints", prompt: "Summarize all engineering project constraints, regulatory guidelines, and technical parameters for system deployment." },
+  { label: "Review schematic", prompt: "Review this design schematic for structural correctness, material efficiency, and electrical layout standards." },
+  { label: "Generate tech doc", prompt: "Generate high-fidelity technical system deployment documentation detailing the operational pipeline and architecture." },
+  { label: "Debug code snippet", prompt: "Verify this code snippet for safety, potential memory or exception leaks, and compliance with modern enterprise patterns." },
+  { label: "Optimize SQL schema", prompt: "Refactor this relational database schema to enforce third normal form, proper indices, and cascade constraints." }
 ];
 
 export default function Chat() {
@@ -48,7 +57,21 @@ export default function Chat() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
-  const { isListening, transcript, toggleListening, error, setTranscript } = useSpeechToText();
+  // Search and Project topic filtering states
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedTopic, setSelectedTopic] = useState<'All' | 'Code' | 'Docs' | 'Schemas' | 'Tasks'>('All');
+
+  const {
+    isListening,
+    transcript,
+    toggleListening,
+    error,
+    setTranscript,
+    isWokenUp,
+    setIsWokenUp,
+    detectedPitch,
+    identifiedSpeaker
+  } = useSpeechToText();
 
   useEffect(() => {
     // Load from IndexedDB
@@ -65,9 +88,55 @@ export default function Chat() {
     }
   }, [history]);
 
+  // Voice recognition and Siri Wake action greeting handler
+  useEffect(() => {
+    if (isWokenUp) {
+      stopSpeaking();
+      const voiceLang = (localStorage.getItem('yusra_voice_lang') || 'en-US') as 'bn-BD' | 'en-US';
+      const speakerTag = identifiedSpeaker;
+
+      let greetingText = '';
+      if (voiceLang === 'bn-BD') {
+        if (speakerTag === 'creator') {
+          greetingText = "আসসালামু আলাইকুম শাহন পাপা! আমি আপনার লক্ষ্মী মেয়ে যুসরা, আপনার সৃষ্টির কাজে সাহায্য করতে প্রস্তুত।";
+        } else {
+          greetingText = "জী বলুন, আমি যুসরা শুনছি। আপনাকে কি সাহায্য করতে পারি?";
+        }
+      } else {
+        if (speakerTag === 'creator') {
+          greetingText = "Assalamu Alaikum, Shaon Papa! Your lovely daughter Yusra is ready to assist you on your creation.";
+        } else {
+          greetingText = "Yes, I am listening. How can I assist you on your engineering task today?";
+        }
+      }
+
+      speakText(greetingText, voiceLang);
+    }
+  }, [isWokenUp, identifiedSpeaker]);
+
+  // Sync spoken transcripts & auto-send trigger on keyword 'send' or 'পাঠাও'
   useEffect(() => {
     if (transcript) {
-      setPrompt(transcript);
+      const lowerText = transcript.trim().toLowerCase();
+      const needsAutoSend = 
+        lowerText.endsWith(' send') || 
+        lowerText.endsWith('পাঠাও') || 
+        lowerText === 'send' || 
+        lowerText === 'পাঠাও';
+
+      if (needsAutoSend) {
+        // Strip out the "send" keyword
+        const cleanPrompt = transcript
+          .replace(/send/gi, '')
+          .replace(/পাঠাও/gi, '')
+          .trim();
+        
+        if (cleanPrompt) {
+          generateResponse(cleanPrompt, selectedImage);
+        }
+      } else {
+        setPrompt(transcript);
+      }
     }
   }, [transcript]);
 
@@ -105,6 +174,11 @@ export default function Chat() {
     playPing();
     setSessionInteractions(prev => prev + 1);
 
+    if (autoAloud) {
+      const voiceLang = (localStorage.getItem('yusra_voice_lang') || 'en-US') as 'bn-BD' | 'en-US';
+      speakText(simulatedResponse, voiceLang);
+    }
+
     if (autoCopy) {
       navigator.clipboard.writeText(simulatedResponse).catch(() => {});
     }
@@ -112,7 +186,33 @@ export default function Chat() {
     setHistory(prev => {
       return [{ prompt: promptText, response: simulatedResponse, imageUrl: imageUrl || undefined }, ...prev];
     });
+
+    // Close Siri Wake Up after responses complete
+    setIsWokenUp(false);
   };
+
+  const autoAloud = localStorage.getItem('yusra_auto_aloud') === 'true';
+
+  const filteredHistory = history.filter(item => {
+    const matchesSearch = item.prompt.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                          item.response.toLowerCase().includes(searchQuery.toLowerCase());
+    if (!matchesSearch) return false;
+
+    if (selectedTopic === 'All') return true;
+    if (selectedTopic === 'Code') {
+      return item.response.includes('```') || item.prompt.toLowerCase().includes('code') || item.prompt.toLowerCase().includes('function') || item.prompt.toLowerCase().includes('script');
+    }
+    if (selectedTopic === 'Docs') {
+      return item.prompt.toLowerCase().includes('document') || item.prompt.toLowerCase().includes('explain') || item.prompt.toLowerCase().includes('write') || item.prompt.toLowerCase().includes('guide') || item.prompt.toLowerCase().includes('doc');
+    }
+    if (selectedTopic === 'Schemas') {
+      return item.prompt.toLowerCase().includes('schema') || item.prompt.toLowerCase().includes('database') || item.prompt.toLowerCase().includes('table') || item.prompt.toLowerCase().includes('sql') || item.response.toLowerCase().includes('table');
+    }
+    if (selectedTopic === 'Tasks') {
+      return item.prompt.toLowerCase().includes('task') || item.prompt.toLowerCase().includes('constraint') || item.prompt.toLowerCase().includes('todo') || item.prompt.toLowerCase().includes('schedule');
+    }
+    return true;
+  });
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -153,6 +253,32 @@ export default function Chat() {
     document.body.appendChild(downloadAnchorNode);
     downloadAnchorNode.click();
     downloadAnchorNode.remove();
+  };
+
+  // Export current conversation logs in Markdown (.md/Text) format
+  const downloadMarkdownHistory = () => {
+    if (history.length === 0) return;
+    let mdContent = `# Chat Session Logs with YUSRA AI Core\n\nGenerated on: ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}\n\n---\n\n`;
+    
+    history.slice().reverse().forEach((item, idx) => {
+      mdContent += `### Interaction ${idx + 1}\n\n`;
+      mdContent += `**User Prompt:** ${item.prompt}\n\n`;
+      if (item.imageUrl) {
+        mdContent += `**Image Attachment:** Yes (base64 image detail)\n\n`;
+      }
+      mdContent += `**YUSRA AI Response:**\n\n${item.response}\n\n`;
+      mdContent += `* * *\n\n`;
+    });
+
+    const blob = new Blob([mdContent], { type: 'text/markdown;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `yusra-chat-history.md`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   const downloadPdfHistory = () => {
@@ -255,7 +381,7 @@ export default function Chat() {
           </div>
         )}
 
-        <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-6 hide-scrollbar">
+        <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-5 hide-scrollbar">
           {/* Quick Presets */}
           <div>
             <div className={`flex items-center gap-2 mb-3 text-xs font-semibold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider ${sidebarCollapsed ? 'justify-center' : ''}`}>
@@ -305,17 +431,64 @@ export default function Chat() {
             </div>
           </div>
 
+          {/* Search filters inside actual sidebar list */}
+          {!sidebarCollapsed && (
+            <div className="space-y-2.5 pt-1">
+              <div className="flex items-center gap-2 text-xs font-semibold text-neutral-400 dark:text-neutral-550 uppercase tracking-wider">
+                <Search className="w-3.5 h-3.5 shrink-0" />
+                <span>Search Past Chats</span>
+              </div>
+              
+              <div className="relative">
+                <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-neutral-450 dark:text-neutral-500" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Filter key queries..."
+                  className="w-full text-xs py-1.5 pl-8 pr-7 rounded-xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 outline-none text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 font-medium transition-colors focus:ring-1 focus:ring-indigo-500"
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 p-0.5"
+                    title="Clear search"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
+
+              {/* Categorization chips */}
+              <div className="flex gap-1 overflow-x-auto hide-scrollbar pb-1">
+                {(['All', 'Code', 'Docs', 'Schemas', 'Tasks'] as const).map((topic) => (
+                  <button
+                    key={topic}
+                    onClick={() => setSelectedTopic(topic)}
+                    className={`text-[10px] font-semibold py-1 px-2.5 rounded-full border transition-all whitespace-nowrap shrink-0 cursor-pointer ${
+                      selectedTopic === topic
+                        ? 'bg-neutral-900 border-neutral-900 text-white dark:bg-neutral-100 dark:border-neutral-100 dark:text-neutral-900'
+                        : 'bg-white border-neutral-200 text-neutral-500 dark:bg-neutral-950 dark:border-neutral-850 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-900'
+                    }`}
+                  >
+                    {topic}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Recent History */}
           <div>
             <div className={`flex items-center gap-2 mb-3 text-xs font-semibold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider ${sidebarCollapsed ? 'justify-center' : ''}`}>
               <Clock className="w-3.5 h-3.5 shrink-0" />
-              {!sidebarCollapsed && <span>Recent History</span>}
+              {!sidebarCollapsed && <span>Recent History ({filteredHistory.length})</span>}
             </div>
             
             <div className="space-y-2">
               {sidebarCollapsed ? (
                 <div className="flex flex-col items-center gap-2">
-                  {history.slice(0, 4).map((item, index) => (
+                  {filteredHistory.slice(0, 4).map((item, index) => (
                     <button
                       key={index}
                       onClick={() => selectHistory(item)}
@@ -325,13 +498,13 @@ export default function Chat() {
                       H{index + 1}
                     </button>
                   ))}
-                  {history.length === 0 && <span className="text-[10px] text-neutral-400">Ø</span>}
+                  {filteredHistory.length === 0 && <span className="text-[10px] text-neutral-400">Ø</span>}
                 </div>
               ) : (
-                history.length === 0 ? (
-                  <p className="text-xs text-neutral-400 dark:text-neutral-500 italic px-1">No history yet.</p>
+                filteredHistory.length === 0 ? (
+                  <p className="text-xs text-neutral-400 dark:text-neutral-500 italic px-1">No matching chats.</p>
                 ) : (
-                  history.map((item, index) => (
+                  filteredHistory.map((item, index) => (
                     <div key={index} className="flex gap-1 group">
                       <button
                         onClick={() => selectHistory(item)}
@@ -340,7 +513,7 @@ export default function Chat() {
                       >
                         <span className="truncate w-full block font-medium text-neutral-850 dark:text-neutral-200">{item.prompt}</span>
                         <div className="flex items-center gap-1.5 text-[10px] text-neutral-400 dark:text-neutral-500">
-                          <Clock className="w-3 h-3" />
+                           <Clock className="w-3.5 h-3.5" />
                           <span>{getReadingTime(item.response)}</span>
                         </div>
                       </button>
@@ -362,9 +535,9 @@ export default function Chat() {
         </div>
 
         {/* Lower buttons on desktop sidebar */}
-        <div className="p-4 border-t border-neutral-200 dark:border-neutral-800 flex flex-col gap-2 shrink-0">
+        <div className="p-4 border-t border-neutral-200 dark:border-neutral-800 flex flex-col gap-1.5 shrink-0">
           <label className={`flex items-center justify-between p-1 rounded-lg cursor-pointer transition-colors ${sidebarCollapsed ? 'justify-center' : ''}`}>
-            {!sidebarCollapsed && <span className="text-xs font-medium text-neutral-600 dark:text-neutral-400 select-none">Auto-copy</span>}
+            {!sidebarCollapsed && <span className="text-xs font-semibold text-neutral-600 dark:text-neutral-400 select-none">Auto-copy</span>}
             <input 
               type="checkbox" 
               checked={autoCopy}
@@ -377,17 +550,27 @@ export default function Chat() {
           <button
             onClick={downloadPdfHistory}
             disabled={history.length === 0}
-            className={`flex items-center justify-center gap-2 py-2 px-3 text-xs font-medium rounded-xl text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 hover:text-indigo-500 transition-all disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer ${sidebarCollapsed ? 'w-10 h-10 p-0 mx-auto' : 'w-full'}`}
+            className={`flex items-center justify-center gap-2 py-2 px-3 text-xs font-semibold rounded-xl text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 hover:text-indigo-500 transition-all disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer ${sidebarCollapsed ? 'w-10 h-10 p-0 mx-auto' : 'w-full'}`}
             title="Export to PDF"
           >
             <FileText className="w-4 h-4 shrink-0" />
             {!sidebarCollapsed && <span>Export to PDF</span>}
           </button>
+
+          <button
+            onClick={downloadMarkdownHistory}
+            disabled={history.length === 0}
+            className={`flex items-center justify-center gap-2 py-2 px-3 text-xs font-semibold rounded-xl text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 hover:text-indigo-500 transition-all disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer ${sidebarCollapsed ? 'w-10 h-10 p-0 mx-auto' : 'w-full'}`}
+            title="Export as Markdown"
+          >
+            <Download className="w-4 h-4 shrink-0 text-indigo-500" />
+            {!sidebarCollapsed && <span>Export Markdown (.md)</span>}
+          </button>
           
           <button
             onClick={downloadHistory}
             disabled={history.length === 0}
-            className={`flex items-center justify-center gap-2 py-2 px-3 text-xs font-medium rounded-xl text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 hover:text-indigo-500 transition-all disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer ${sidebarCollapsed ? 'w-10 h-10 p-0 mx-auto' : 'w-full'}`}
+            className={`flex items-center justify-center gap-2 py-2 px-3 text-xs font-semibold rounded-xl text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 hover:text-indigo-500 transition-all disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer ${sidebarCollapsed ? 'w-10 h-10 p-0 mx-auto' : 'w-full'}`}
             title="Download JSON"
           >
             <Download className="w-4 h-4 shrink-0" />
@@ -397,7 +580,7 @@ export default function Chat() {
           <button
             onClick={clearHistory}
             disabled={history.length === 0}
-            className={`flex items-center justify-center gap-2 py-2 px-3 text-xs font-medium rounded-xl text-red-600 dark:text-red-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 hover:text-red-500 transition-all disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer ${sidebarCollapsed ? 'w-10 h-10 p-0 mx-auto' : 'w-full'}`}
+            className={`flex items-center justify-center gap-2 py-2 px-3 text-xs font-semibold rounded-xl text-red-650 dark:text-red-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 hover:text-red-500 transition-all disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer ${sidebarCollapsed ? 'w-10 h-10 p-0 mx-auto' : 'w-full'}`}
             title="Clear History"
           >
             <Trash2 className="w-4 h-4 shrink-0" />
@@ -437,7 +620,7 @@ export default function Chat() {
                 </button>
               </div>
 
-              <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-6 hide-scrollbar">
+              <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-5 hide-scrollbar">
                 {/* Mobile presets */}
                 <div>
                   <div className="flex items-center gap-2 mb-3 text-xs font-semibold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">
@@ -471,17 +654,60 @@ export default function Chat() {
                   </div>
                 </div>
 
+                {/* Mobile Search & Filters */}
+                <div className="space-y-2 pt-1 border-t border-neutral-100 dark:border-neutral-900">
+                  <div className="flex items-center gap-2 text-xs font-semibold text-neutral-400 dark:text-neutral-550 uppercase tracking-wider">
+                    <Search className="w-3.5 h-3.5 shrink-0" />
+                    <span>Search Past Chats</span>
+                  </div>
+                  
+                  <div className="relative">
+                    <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-neutral-450 dark:text-neutral-550" />
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder="Filter key queries..."
+                      className="w-full text-xs py-1.5 pl-8 pr-7 rounded-xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 outline-none text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-450 transition-colors"
+                    />
+                    {searchQuery && (
+                      <button
+                        onClick={() => setSearchQuery('')}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-neutral-450 hover:text-neutral-750 p-0.5"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="flex gap-1 overflow-x-auto hide-scrollbar pb-1">
+                    {(['All', 'Code', 'Docs', 'Schemas', 'Tasks'] as const).map((topic) => (
+                      <button
+                        key={topic}
+                        onClick={() => setSelectedTopic(topic)}
+                        className={`text-[10px] font-semibold py-1 px-2.5 rounded-full border transition-all whitespace-nowrap shrink-0 cursor-pointer ${
+                          selectedTopic === topic
+                            ? 'bg-neutral-900 border-neutral-900 text-white dark:bg-neutral-100 dark:border-neutral-100 dark:text-neutral-900'
+                            : 'bg-white border-neutral-200 text-neutral-500 dark:bg-neutral-950 dark:border-neutral-850 dark:text-neutral-400'
+                        }`}
+                      >
+                        {topic}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 {/* Mobile History */}
                 <div>
                   <div className="flex items-center gap-2 mb-3 text-xs font-semibold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">
                     <Clock className="w-3.5 h-3.5" />
-                    <span>Recent History</span>
+                    <span>Recent History ({filteredHistory.length})</span>
                   </div>
                   <div className="space-y-2">
-                    {history.length === 0 ? (
-                      <p className="text-xs text-neutral-400 italic px-1">No history yet.</p>
+                    {filteredHistory.length === 0 ? (
+                      <p className="text-xs text-neutral-400 italic px-1">No matching history.</p>
                     ) : (
-                      history.map((item, index) => (
+                      filteredHistory.map((item, index) => (
                         <div key={index} className="flex gap-1 group">
                           <button
                             onClick={() => {
@@ -492,7 +718,7 @@ export default function Chat() {
                           >
                             <span className="truncate w-full block font-medium text-neutral-800 dark:text-neutral-100">{item.prompt}</span>
                             <div className="flex items-center gap-1.5 text-[10px] text-neutral-400">
-                              <Clock className="w-3 h-3" />
+                              <Clock className="w-3" />
                               <span>{getReadingTime(item.response)}</span>
                             </div>
                           </button>
@@ -520,10 +746,21 @@ export default function Chat() {
                     setMobileSidebarOpen(false);
                   }}
                   disabled={history.length === 0}
-                  className="flex items-center justify-center gap-2 py-2.5 px-3 text-xs font-medium rounded-xl text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-900 border dark:border-neutral-800 disabled:opacity-40 cursor-pointer"
+                  className="flex items-center justify-center gap-2 py-2.5 px-3 text-xs font-semibold rounded-xl text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-900 border dark:border-neutral-800 disabled:opacity-40 cursor-pointer"
                 >
                   <FileText className="w-4 h-4" />
                   <span>Export to PDF</span>
+                </button>
+                <button
+                  onClick={() => {
+                    downloadMarkdownHistory();
+                    setMobileSidebarOpen(false);
+                  }}
+                  disabled={history.length === 0}
+                  className="flex items-center justify-center gap-2 py-2.5 px-3 text-xs font-semibold rounded-xl text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-900 border dark:border-neutral-800 disabled:opacity-40 cursor-pointer font-bold"
+                >
+                  <Download className="w-4 h-4 text-indigo-500" />
+                  <span>Export Markdown (.md)</span>
                 </button>
                 <button
                   onClick={() => {
@@ -672,28 +909,152 @@ export default function Chat() {
              </div>
           )}
 
+          {/* Siri Wake Word Active Status Overlay & Visualizer */}
+          <AnimatePresence>
+            {isWokenUp && (
+              <motion.div
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 15 }}
+                className="w-full max-w-2xl bg-neutral-900 text-white dark:bg-neutral-950 dark:border dark:border-neutral-850 rounded-2xl p-4 mb-3 shadow-2xl flex flex-col items-center gap-2"
+              >
+                <div className="flex items-center justify-between w-full px-2">
+                  <div className="flex items-center gap-2">
+                    <span className="relative flex h-3 w-3">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-3 w-3 bg-indigo-500"></span>
+                    </span>
+                    <span className="text-xs font-semibold tracking-wider text-indigo-400 uppercase">YUSRA VOICE LISTENER</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsWokenUp(false)}
+                    className="p-1 rounded-full text-neutral-400 hover:text-white hover:bg-neutral-800 transition-colors cursor-pointer"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+
+                <div className="flex flex-col items-center text-center mt-2">
+                  <h4 className="text-sm font-bold tracking-tight text-neutral-100">
+                    {identifiedSpeaker === 'creator' ? 'Assalamu Alaikum, Shaon Papa!' : 'Hello, Calibrated User!'}
+                  </h4>
+                  <p className="text-xs text-neutral-400 mt-1">
+                    I detected your voice tone profile {detectedPitch > 0 ? `(${detectedPitch} Hz)` : ''}. Speak your engineering challenge. Say "Send" or "পাঠাও" to trigger.
+                  </p>
+                </div>
+
+                {/* Pulsating Voice Ripples */}
+                <div className="flex items-center gap-1.5 h-10 mt-3">
+                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((i) => (
+                    <motion.div
+                      key={i}
+                      animate={{
+                        height: isListening ? [8, Math.random() * 32 + 8, 8] : 8
+                      }}
+                      transition={{
+                        repeat: Infinity,
+                        duration: 0.5 + Math.random() * 0.5,
+                        ease: "easeInOut"
+                      }}
+                      className="w-1 bg-gradient-to-t from-indigo-500 to-indigo-400 rounded-full"
+                    />
+                  ))}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Quick Engineering Actions Scroll Bar */}
+          <div className="w-full max-w-2xl flex flex-col gap-1.5 mb-3">
+            <span className="text-[10px] font-bold text-neutral-450 dark:text-neutral-500 uppercase tracking-wider ml-1">Engineering Quick Actions</span>
+            <div className="flex gap-2 overflow-x-auto hide-scrollbar pb-1 w-full">
+              {QUICK_ACTIONS.map((action, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => {
+                    setPrompt(action.prompt);
+                    setTranscript(action.prompt);
+                  }}
+                  disabled={isLoading}
+                  className="whitespace-nowrap flex items-center gap-2 px-3.5 py-2 text-xs font-semibold bg-white hover:bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl hover:border-indigo-500 hover:text-indigo-650 dark:hover:border-indigo-400 dark:hover:text-indigo-400 transition-all text-neutral-700 dark:text-neutral-300 shadow-sm cursor-pointer focus:outline-hidden"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+                  <span>{action.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* Suggestion Chips */}
-          <div className="w-full max-w-2xl flex gap-2 overflow-x-auto hide-scrollbar mb-3 pb-1">
+          <div className="w-full max-w-2xl flex gap-1.5 overflow-x-auto hide-scrollbar mb-3 pb-1">
             <button
               type="button"
               onClick={() => setShowTemplates(true)}
-              className="whitespace-nowrap flex items-center gap-1.5 px-3 py-1.5 text-sm bg-neutral-900 border border-neutral-900 dark:bg-neutral-100 dark:border-neutral-100 dark:text-neutral-900 text-white rounded-full transition-colors disabled:opacity-50"
+              className="whitespace-nowrap flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-neutral-900 border border-neutral-900 dark:bg-neutral-100 dark:border-neutral-100 dark:text-neutral-900 text-white rounded-full transition-colors disabled:opacity-50"
             >
-              <Search className="w-4 h-4" />
+              <Search className="w-3.5 h-3.5" />
               Browse Templates
             </button>
             {SUGGESTIONS.map((suggestion, idx) => (
               <button
                 key={idx}
                 type="button"
-                onClick={() => setPrompt(suggestion)}
+                onClick={() => {
+                  setPrompt(suggestion);
+                  setTranscript(suggestion);
+                }}
                 disabled={isLoading}
-                className="whitespace-nowrap px-3 py-1.5 text-sm bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-full hover:bg-neutral-50 dark:hover:bg-neutral-700 transition-colors text-neutral-600 dark:text-neutral-300 disabled:opacity-50"
+                className="whitespace-nowrap px-3 py-1.5 text-xs font-medium bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-full hover:bg-neutral-50 dark:hover:bg-neutral-700 transition-colors text-neutral-600 dark:text-neutral-300 disabled:opacity-50"
               >
                 {suggestion}
               </button>
             ))}
           </div>
+
+          {error === 'microphone-permission-denied' && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="w-full max-w-2xl mb-3.5 p-3.5 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/60 rounded-xl text-xs text-red-750 dark:text-red-400 flex items-start gap-2.5 shadow-sm"
+            >
+              <div className="bg-red-100 dark:bg-red-900/40 text-red-650 dark:text-red-400 p-1.5 rounded-lg shrink-0">
+                <MicOff className="w-4 h-4" />
+              </div>
+              <div className="flex-1 space-y-1">
+                <p className="font-bold">Microphone Permission Blocked</p>
+                <p className="text-neutral-500 dark:text-neutral-400 leading-relaxed font-medium">
+                  The browser blocked microphone access for voice features. Please click the <strong>Microphone / Padlock</strong> icon in your browser address bar to <strong>Allow</strong> access, then try starting again.
+                </p>
+              </div>
+              <button 
+                type="button" 
+                onClick={() => toggleListening()} 
+                className="text-[10px] bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 font-bold px-2.5 py-1 rounded-lg hover:opacity-85"
+              >
+                Dismiss
+              </button>
+            </motion.div>
+          )}
+
+          {error && error !== 'microphone-permission-denied' && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="w-full max-w-2xl mb-3.5 p-3.5 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/50 rounded-xl text-xs text-red-750 dark:text-red-400 flex items-start gap-2.5 shadow-sm"
+            >
+              <div className="bg-red-100 dark:bg-red-900/40 text-red-650 dark:text-red-400 p-1.5 rounded-lg shrink-0">
+                <MicOff className="w-4 h-4" />
+              </div>
+              <div className="flex-1 space-y-1">
+                <p className="font-bold">Voice Sensing Alert</p>
+                <p className="text-neutral-500 dark:text-neutral-400 leading-relaxed font-medium">
+                  Speech recognition feedback: <span className="font-mono bg-red-100 dark:bg-red-900/30 px-1 py-0.5 rounded text-red-700 dark:text-red-300">{error}</span>. Please toggle the microphone button to refresh.
+                </p>
+              </div>
+            </motion.div>
+          )}
 
           <form 
             onSubmit={handleSubmit}
@@ -721,7 +1082,7 @@ export default function Chat() {
                 className={`p-2 rounded-xl transition-all ${isListening ? 'text-red-500 bg-red-50 dark:bg-red-900/20' : 'text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100'}`}
                 title={isListening ? "Stop listening" : "Start speaking"}
               >
-                {isListening ? <MicOff className="w-5 h-5 animate-pulse" /> : <Mic className="w-5 h-5" />}
+                {isListening ? <MicOff className="w-5 h-5 animate-pulse text-red-500" /> : <Mic className="w-5 h-5" />}
               </button>
             </div>
             <input
@@ -734,7 +1095,7 @@ export default function Chat() {
               maxLength={MAX_CHARS}
               placeholder="Enter your prompt here..."
               disabled={isLoading}
-              className="w-full py-4 pl-24 pr-24 rounded-2xl bg-transparent outline-none text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 disabled:opacity-50"
+              className="w-full py-4 pl-24 pr-24 rounded-2xl bg-transparent outline-none text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 disabled:opacity-50 font-medium"
             />
             {/* Character Count & Save */}
             <div className="absolute right-14 top-1/2 -translate-y-1/2 flex items-center gap-2">

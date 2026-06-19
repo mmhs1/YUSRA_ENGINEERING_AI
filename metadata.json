@@ -1,6 +1,10 @@
 {
-  "name": "",
-  "description": "",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+  "name": "Yusra AI Assistant",
+  "description": "A highly conversational, secure, voice-activated AI assistant featuring calibrated voice recognition and robust developer toolkits.",
+  "requestFramePermissions": [
+    "microphone"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
 }

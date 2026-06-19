@@ -1,12 +1,14 @@
-import { Sparkles, Copy, Check, Clock, ChevronDown, ChevronUp, BotMessageSquare, FileText, RefreshCw } from 'lucide-react';
+import { Sparkles, Copy, Check, Clock, ChevronDown, ChevronUp, BotMessageSquare, FileText, RefreshCw, Download, Volume2, VolumeX } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useState } from 'react';
 import { getReadingTime } from '../utils/readingTime';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { speakText, stopSpeaking } from '../utils/voiceEngine';
 
 const CodeBlock = ({ node, inline, className, children, ...props }: any) => {
   const [isCopied, setIsCopied] = useState(false);
+  const [isDownloaded, setIsDownloaded] = useState(false);
   const match = /language-(\w+)/.exec(className || '');
   const isInline = inline || !match;
 
@@ -14,6 +16,37 @@ const CodeBlock = ({ node, inline, className, children, ...props }: any) => {
     navigator.clipboard.writeText(String(children).replace(/\n$/, ''));
     setIsCopied(true);
     setTimeout(() => setIsCopied(false), 2000);
+  };
+
+  const handleDownloadCode = () => {
+    const codeContent = String(children).replace(/\n$/, '');
+    const language = match?.[1] || 'txt';
+    const extMap: Record<string, string> = {
+      javascript: 'js',
+      typescript: 'ts',
+      python: 'py',
+      html: 'html',
+      css: 'css',
+      json: 'json',
+      rust: 'rs',
+      cpp: 'cpp',
+      c: 'c',
+      bash: 'sh',
+      shell: 'sh'
+    };
+    const ext = extMap[language.toLowerCase()] || language || 'txt';
+    const blob = new Blob([codeContent], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `snippet.${ext}`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    setIsDownloaded(true);
+    setTimeout(() => setIsDownloaded(false), 2000);
   };
 
   if (isInline) {
@@ -24,13 +57,22 @@ const CodeBlock = ({ node, inline, className, children, ...props }: any) => {
     <div className="relative group/code mt-4 mb-4 rounded-lg overflow-hidden bg-neutral-900 border border-neutral-700">
       <div className="flex items-center justify-between px-4 py-1.5 bg-neutral-800 border-b border-neutral-700">
         <span className="text-xs text-neutral-400 font-mono">{match?.[1] || 'code'}</span>
-        <button
-          onClick={handleCopyCode}
-          className="text-neutral-400 hover:text-white transition-colors p-1"
-          title="Copy code"
-        >
-          {isCopied ? <Check className="w-3.5 h-3.5 text-green-500" /> : <Copy className="w-3.5 h-3.5" />}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleDownloadCode}
+            className="text-neutral-400 hover:text-white transition-colors p-1"
+            title="Download code file"
+          >
+            {isDownloaded ? <Check className="w-3.5 h-3.5 text-indigo-400" /> : <Download className="w-3.5 h-3.5" />}
+          </button>
+          <button
+            onClick={handleCopyCode}
+            className="text-neutral-400 hover:text-white transition-colors p-1"
+            title="Copy code"
+          >
+            {isCopied ? <Check className="w-3.5 h-3.5 text-green-500" /> : <Copy className="w-3.5 h-3.5" />}
+          </button>
+        </div>
       </div>
       <div className="p-4 overflow-x-auto text-sm text-neutral-100 font-mono">
         <code className={className} {...props}>
@@ -49,11 +91,31 @@ interface AIResponseProps {
 export function AIResponse({ response, onRetry }: AIResponseProps) {
   const [copied, setCopied] = useState(false);
   const [expanded, setExpanded] = useState(true);
+  const [isSpeaking, setIsSpeaking] = useState(false);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(response);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const toggleSpeak = () => {
+    if (isSpeaking) {
+      stopSpeaking();
+      setIsSpeaking(false);
+    } else {
+      setIsSpeaking(true);
+      // Auto-detect language. If response has Bangla characters, speak in Bangla.
+      const hasBangla = /[\u0980-\u09FF]/.test(response);
+      const voiceLang = hasBangla ? 'bn-BD' : (localStorage.getItem('yusra_voice_lang') || 'en-US') as 'bn-BD' | 'en-US';
+
+      speakText(
+        response,
+        voiceLang,
+        () => setIsSpeaking(true),
+        () => setIsSpeaking(false)
+      );
+    }
   };
 
   const readingTime = getReadingTime(response);
@@ -66,6 +128,13 @@ export function AIResponse({ response, onRetry }: AIResponseProps) {
       className="w-full max-w-2xl p-6 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl shadow-sm relative group flex flex-col transition-all duration-300"
     >
       <div className="absolute top-4 right-4 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+        <button 
+          onClick={toggleSpeak}
+          className={`p-2 rounded-lg transition-colors ${isSpeaking ? 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/40 animate-pulse' : 'text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100 bg-neutral-100 dark:bg-neutral-700'}`}
+          title={isSpeaking ? "Stop Speaking" : "Listen Verbally"}
+        >
+          {isSpeaking ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+        </button>
         <button 
           onClick={handleCopy}
           className="p-2 text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100 bg-neutral-100 dark:bg-neutral-700 rounded-lg transition-colors"
@@ -130,12 +199,14 @@ export function AIResponse({ response, onRetry }: AIResponseProps) {
               <span>{wordCount} words</span>
             </div>
           </div>
-          {onRetry && (
-            <button onClick={onRetry} className="flex items-center gap-1.5 hover:text-neutral-900 dark:hover:text-neutral-100 transition-colors">
-              <RefreshCw className="w-3.5 h-3.5" />
-              <span>Retry</span>
-            </button>
-          )}
+          <div className="flex items-center gap-3">
+            {onRetry && (
+              <button onClick={onRetry} className="flex items-center gap-1.5 hover:text-neutral-900 dark:hover:text-neutral-100 transition-colors">
+                <RefreshCw className="w-3.5 h-3.5" />
+                <span>Retry</span>
+              </button>
+            )}
+          </div>
         </motion.div>
       )}
     </motion.div>
