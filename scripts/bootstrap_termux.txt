@@ -1,0 +1,23 @@
+# Termux & Proot Ubuntu Bootstrap Guide
+=====================================
+
+1. Install Termux from F-Droid (do not use Play Store version).
+2. Update and upgrade packages:
+   $ pkg update && pkg upgrade -y
+3. Install proot-distro:
+   $ pkg install proot-distro -y
+4. Install Ubuntu:
+   $ proot-distro install ubuntu
+5. Login to Ubuntu:
+   $ proot-distro login ubuntu
+6. Update Ubuntu and install dependencies:
+   $ apt update && apt upgrade -y
+   $ apt install curl git build-essential python3 python3-pip -y
+7. Install Node.js (via NVM or nodesource):
+   $ curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+   $ apt-get install -y nodejs
+8. Verify installations:
+   $ node -v
+   $ npm -v
+   $ python3 --version
+   $ git --version
