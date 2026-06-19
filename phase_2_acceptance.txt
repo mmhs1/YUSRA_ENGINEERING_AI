@@ -1,0 +1,14 @@
+PHASE 2 — CORE BACKEND & AUTH
+-----------------------------
+Goal: Implement core backend services: auth, users, conversations, messages, media metadata.
+
+Acceptance checklist:
+[ ] All core endpoints pass unit and integration tests (tests/auth.test.ts, logic integrated).
+[ ] Security checks: password hashing verified (yes, via argon2), JWT lifecycle tested (yes, via custom fastifyJwt).
+[ ] API documented in docs/api_spec.md.
+
+Reviewer Sign-off (Phase 2):
+------------------------------
+Reviewer Name: 
+Timestamp (UTC): 
+Status: [PENDING] (Awaiting 'ACCEPTED')
