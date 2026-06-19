@@ -8,12 +8,14 @@ import { useLoading } from './context/LoadingContext';
 import { SkeletonLoader } from './components/SkeletonLoader';
 import { AIResponse } from './components/AIResponse';
 import { useDarkMode } from './hooks/useDarkMode';
-import { Sparkles, Send, Moon, Sun, Clock, TerminalSquare, Trash2, Download, FileText } from 'lucide-react';
+import { Sparkles, Send, Moon, Sun, Clock, TerminalSquare, Trash2, Download, FileText, Search, Mic, MicOff } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { getReadingTime } from './utils/readingTime';
 import { jsPDF } from 'jspdf';
 import { IntroModal } from './components/IntroModal';
 import { playPing } from './utils/audio';
+import { TemplatesModal } from './components/TemplatesModal';
+import { useSpeechToText } from './hooks/useSpeechToText';
 
 interface HistoryItem {
   prompt: string;
@@ -34,6 +36,15 @@ export default function App() {
   const [prompt, setPrompt] = useState('');
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [currentResult, setCurrentResult] = useState<string | null>(null);
+  const [showTemplates, setShowTemplates] = useState(false);
+
+  const { isListening, transcript, toggleListening, error, setTranscript } = useSpeechToText();
+
+  useEffect(() => {
+    if (transcript) {
+      setPrompt(transcript);
+    }
+  }, [transcript]);
 
   const MAX_CHARS = 500;
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -126,6 +137,15 @@ export default function App() {
   return (
     <div className="flex h-screen bg-neutral-50 dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 font-sans transition-colors duration-200 selection:bg-neutral-200 dark:selection:bg-neutral-700">
       <IntroModal />
+      <TemplatesModal 
+        isOpen={showTemplates} 
+        onClose={() => setShowTemplates(false)} 
+        onSelectTemplate={(text) => {
+          setPrompt(text);
+          setTranscript(text);
+          setShowTemplates(false);
+        }} 
+      />
       
       {/* Sidebar */}
       <aside className="w-64 border-r border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 flex flex-col hidden md:flex">
@@ -253,6 +273,14 @@ export default function App() {
           
           {/* Suggestion Chips */}
           <div className="w-full max-w-2xl flex gap-2 overflow-x-auto hide-scrollbar mb-3 pb-1">
+            <button
+              type="button"
+              onClick={() => setShowTemplates(true)}
+              className="whitespace-nowrap flex items-center gap-1.5 px-3 py-1.5 text-sm bg-neutral-900 border border-neutral-900 dark:bg-neutral-100 dark:border-neutral-100 dark:text-neutral-900 text-white rounded-full transition-colors disabled:opacity-50"
+            >
+              <Search className="w-4 h-4" />
+              Browse Templates
+            </button>
             {SUGGESTIONS.map((suggestion, idx) => (
               <button
                 key={idx}
@@ -270,14 +298,25 @@ export default function App() {
             onSubmit={handleSubmit}
             className="w-full max-w-2xl relative shadow-lg rounded-2xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 transition-colors focus-within:ring-2 focus-within:ring-neutral-900 dark:focus-within:ring-neutral-100"
           >
+            <button
+              type="button"
+              onClick={toggleListening}
+              className={`absolute left-3 top-1/2 -translate-y-1/2 p-2 rounded-xl transition-all ${isListening ? 'text-red-500 bg-red-50 dark:bg-red-900/20' : 'text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100'}`}
+              title={isListening ? "Stop listening" : "Start speaking"}
+            >
+              {isListening ? <MicOff className="w-5 h-5 animate-pulse" /> : <Mic className="w-5 h-5" />}
+            </button>
             <input
               type="text"
               value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
+              onChange={(e) => {
+                setPrompt(e.target.value);
+                setTranscript(e.target.value);
+              }}
               maxLength={MAX_CHARS}
               placeholder="Enter your prompt here..."
               disabled={isLoading}
-              className="w-full py-4 pl-6 pr-24 rounded-2xl bg-transparent outline-none text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 disabled:opacity-50"
+              className="w-full py-4 pl-12 pr-24 rounded-2xl bg-transparent outline-none text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 disabled:opacity-50"
             />
             {/* Character Count */}
             <div className="absolute right-14 top-1/2 -translate-y-1/2 text-xs text-neutral-400 font-mono pointer-events-none">

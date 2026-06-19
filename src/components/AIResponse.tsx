@@ -1,4 +1,4 @@
-import { Sparkles, Copy, Check, Clock, ChevronDown, ChevronUp } from 'lucide-react';
+import { Sparkles, Copy, Check, Clock, ChevronDown, ChevronUp, BotMessageSquare } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useState } from 'react';
 import { getReadingTime } from '../utils/readingTime';
@@ -58,8 +58,8 @@ export function AIResponse({ response }: AIResponseProps) {
       </div>
 
       <div className="flex items-start gap-4 flex-1">
-        <div className="w-10 h-10 rounded-full bg-neutral-900 dark:bg-neutral-100 flex items-center justify-center shrink-0">
-          <Sparkles className="w-5 h-5 text-white dark:text-neutral-900" />
+        <div className="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center shrink-0 border border-indigo-200 dark:border-indigo-800">
+          <BotMessageSquare className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
         </div>
         <div className="pt-2 border-transparent w-full pr-20">
           <div className="flex items-center gap-3 mb-2">
