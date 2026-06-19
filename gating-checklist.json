@@ -154,22 +154,258 @@
     {
       "id": "8",
       "title": "Authentication and authorization",
-      "status": "pending",
+      "status": "accepted",
       "checklist": [
         {
           "id": "8.1",
           "item": "JWT lifecycle, refresh token rules, and cookie vs header usage detailed.",
-          "passed": false
+          "passed": true
         },
         {
           "id": "8.2",
           "item": "OAuth connectors and 2FA flow explained.",
-          "passed": false
+          "passed": true
         },
         {
           "id": "8.3",
           "item": "RBAC matrix with exact permissions per role provided.",
-          "passed": false
+          "passed": true
+        }
+      ]
+    },
+    {
+      "id": "9",
+      "title": "Persona enforcement and system prompts",
+      "status": "accepted",
+      "checklist": [
+        {
+          "id": "9.1",
+          "item": "Exact system prompt text(s) enforcing persona phrase and behavior rules included.",
+          "passed": true
+        },
+        {
+          "id": "9.2",
+          "item": "Rules for when the persona phrase must appear verbatim are defined.",
+          "passed": true
+        },
+        {
+          "id": "9.3",
+          "item": "Post-processing checks to ensure persona compliance are documented.",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "id": "10",
+      "title": "RAG and retrieval design",
+      "status": "accepted",
+      "checklist": [
+        {
+          "id": "10.1",
+          "item": "Chunking strategy (including splitters, chunk size, and overlap) defined.",
+          "passed": true
+        },
+        {
+          "id": "10.2",
+          "item": "Embedding model and exact dimensions (1536) align with schema definition.",
+          "passed": true
+        },
+        {
+          "id": "10.3",
+          "item": "Similarity metric and explicit similarity thresholds defined.",
+          "passed": true
+        },
+        {
+          "id": "10.4",
+          "item": "Re-ranking rules (initial vs visual/returned candidate size) defined.",
+          "passed": true
+        },
+        {
+          "id": "10.5",
+          "item": "Provenance metadata schema documented for citations.",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "id": "11",
+      "title": "Worker queue and task design",
+      "status": "accepted",
+      "checklist": [
+        {
+          "id": "11.1",
+          "item": "Queue names, roles, and message flow are specified.",
+          "passed": true
+        },
+        {
+          "id": "11.2",
+          "item": "Payload schemas and idempotency key handling are documented.",
+          "passed": true
+        },
+        {
+          "id": "11.3",
+          "item": "Retry/backoff policy and dead-letter handling defined.",
+          "passed": true
+        },
+        {
+          "id": "11.4",
+          "item": "Key monitoring metrics specified.",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "id": "12",
+      "title": "Media processing pipeline",
+      "status": "accepted",
+      "checklist": [
+        {
+          "id": "12.1",
+          "item": "Audio normalization and canonical formats are defined.",
+          "passed": true
+        },
+        {
+          "id": "12.2",
+          "item": "FFmpeg transcoding command presets are specified.",
+          "passed": true
+        },
+        {
+          "id": "12.3",
+          "item": "TTS voice management, synthesis, and caching policies are documented.",
+          "passed": true
+        },
+        {
+          "id": "12.4",
+          "item": "CDN delivery and caching strategies are defined.",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "id": "13",
+      "title": "Speaker verification enrollment and verification flows",
+      "status": "accepted",
+      "checklist": [
+        {
+          "id": "13.1",
+          "item": "Enrollment UX steps, quality metrics, and audio capture guidelines are defined.",
+          "passed": true
+        },
+        {
+          "id": "13.2",
+          "item": "Embedding storage format and model references are specified.",
+          "passed": true
+        },
+        {
+          "id": "13.3",
+          "item": "Cosine similarity matching threshold and verification logic details are provided.",
+          "passed": true
+        },
+        {
+          "id": "13.4",
+          "item": "Fallback mechanisms for authentication failure are documented.",
+          "passed": true
+        },
+        {
+          "id": "13.5",
+          "item": "Verbatim biometric consent UI text is included.",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "id": "14",
+      "title": "Frontend design system (mobile-first PWA)",
+      "status": "accepted",
+      "checklist": [
+        {
+          "id": "14.1",
+          "item": "Design tokens, breakpoints, and theme colors defined.",
+          "passed": true
+        },
+        {
+          "id": "14.2",
+          "item": "Collapsible navigation with animated icons and touch ripple details included.",
+          "passed": true
+        },
+        {
+          "id": "14.3",
+          "item": "Service worker pattern, PWA details, and performance/Lighthouse targets documented.",
+          "passed": true
+        },
+        {
+          "id": "14.4",
+          "item": "Core UI flows (Onboarding, Chat, Upload, Settings/Admin) described in detail.",
+          "passed": true
+        },
+        {
+          "id": "14.5",
+          "item": "Error states and recovery UX for at least three common failure scenarios are provided.",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "id": "15",
+      "title": "Testing and quality gates",
+      "status": "accepted",
+      "checklist": [
+        {
+          "id": "15.1",
+          "item": "Unit, integration, E2E, load, security, and accessibility test requirements defined.",
+          "passed": true
+        },
+        {
+          "id": "15.2",
+          "item": "Test coverage targets and acceptance thresholds documented.",
+          "passed": true
+        },
+        {
+          "id": "15.3",
+          "item": "Automated test matrix and CI job definitions included.",
+          "passed": true
+        },
+        {
+          "id": "15.4",
+          "item": "Next-gen quality gates (Lighthouse CI, Offline E2E, Persona Drift Test) defined.",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "id": "16",
+      "title": "CI/CD and deployment",
+      "status": "accepted",
+      "checklist": [
+        {
+          "id": "16.1",
+          "item": "Git branching model, SemVer tagging, and GHCR multi-arch container registries defined.",
+          "passed": true
+        },
+        {
+          "id": "16.2",
+          "item": "VPS deployment (Docker Compose and systemd runners) specified.",
+          "passed": true
+        },
+        {
+          "id": "16.3",
+          "item": "Client-side Edge deployment (Vercel PWA tier) documented.",
+          "passed": true
+        },
+        {
+          "id": "16.4",
+          "item": "Zero-downtime DB migrations (expand/contract) and rapid rollback procedures defined.",
+          "passed": true
+        },
+        {
+          "id": "16.5",
+          "item": "Encryption/Secrets Management architecture detailed.",
+          "passed": true
+        },
+        {
+          "id": "16.6",
+          "item": "Termux-backup sync script pipelines and native device intent hooks defined.",
+          "passed": true
         }
       ]
     }

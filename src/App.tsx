@@ -6,6 +6,8 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Settings from './pages/Settings';
 import { useEffect, useState } from 'react';
+import { TouchRipple } from './components/TouchRipple';
+import { AnimatedBackground } from './components/AnimatedBackground';
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const token = localStorage.getItem('auth_token');
@@ -23,6 +25,8 @@ export default function App() {
 
   return (
     <Router>
+      <AnimatedBackground />
+      <TouchRipple />
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
