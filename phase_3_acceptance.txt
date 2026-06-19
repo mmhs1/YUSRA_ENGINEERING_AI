@@ -1,0 +1,15 @@
+PHASE 3 — FRONTEND PWA (MOBILE-FIRST)
+-------------------------------------
+Goal: Build mobile-first PWA chat UI, onboarding, settings, and persona header.
+
+Acceptance checklist:
+[x] PWA passes Lighthouse performance and accessibility thresholds (configurable target, e.g., Performance >= 80, Accessibility >= 90).
+[x] Offline send/receive behavior validated in simulated offline mode.
+[x] Persona phrase appears verbatim at conversation start.
+[x] Reviewer sign-off.
+
+Reviewer Sign-off (Phase 3):
+------------------------------
+Reviewer Name: Mohammad Maynul Shaon
+Timestamp (UTC): 2026-06-19T01:54:32Z
+Status: ACCEPTED

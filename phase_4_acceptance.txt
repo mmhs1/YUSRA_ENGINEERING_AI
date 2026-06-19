@@ -1,0 +1,15 @@
+PHASE 4 — WORKER SERVICES & ML INTEGRATION
+------------------------------------------
+Goal: Implement worker architecture and integrate OCR, TTS, speaker verification, and embeddings.
+
+Acceptance checklist:
+[x] Workers process tasks end-to-end and produce expected artifacts (OCR text, TTS audio, normalized audio, embeddings).
+[x] Idempotency and retry behavior validated.
+[x] Dead-letter queue behavior tested.
+[ ] Reviewer sign-off.
+
+Reviewer Sign-off (Phase 4):
+------------------------------
+Reviewer Name: 
+Timestamp (UTC): 
+Status: [PENDING] (Awaiting 'ACCEPTED')
