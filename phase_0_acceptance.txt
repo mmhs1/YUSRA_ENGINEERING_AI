@@ -3,9 +3,9 @@ PHASE 0 — PREPARATION & ONBOARDING
 Goal: Align stakeholders, finalize persona & privacy policy, create repo and access.
 
 Acceptance checklist:
-[ ] Repo exists and team members have push access.
-[ ] Persona phrase documented verbatim (see docs/persona.md).
-[ ] Secrets inventory template created (see docs/secrets_inventory.md).
+[x] Repo exists and team members have push access.
+[x] Persona phrase documented verbatim (see docs/persona.md).
+[x] Secrets inventory template created (see docs/secrets_inventory.md).
 
 Reviewer Sign-off (Phase 0):
 ------------------------------
