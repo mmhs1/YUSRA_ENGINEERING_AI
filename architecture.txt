@@ -61,6 +61,74 @@ Acceptance Checklist for Section 3:
 
 Reviewer Sign-off (Section 3):
 ------------------------------
+Reviewer Name: Mohammad Maynul Shaon
+Timestamp (UTC): 2026-06-19T00:53:38Z
+Status: ACCEPTED
+
+4. Component inventory (detailed)
+---------------------------------
+Frontend (PWA)
+- Responsibilities: Render mobile-optimized interfaces, capture user media (audio/voice), execute local context management.
+- Pages/UX flows: Onboarding (consent & persona intro), Chat/Interaction view, Settings, Media History.
+- Offline behavior: Service worker caches static assets/shells. IndexedDB buffers outgoing prompts/audio if offline and syncs when reconnected.
+- Security: Secure local storage for tokens, CSP headers, XSS prevention.
+
+Backend (API Gateway)
+- Endpoints: RESTful paths prefixed with /api/v1/. E.g., /api/v1/chat, /api/v1/auth.
+- Protocols: HTTPS POST/GET, WebSockets/Server-Sent Events (SSE) for streaming model responses.
+- Versioning: URI path versioning (/v1/).
+- Error model: Standardized JSON ({ "error": { "code": 401, "message": "Unauthorized" } }).
+
+Worker services
+- Tasks: Asynchronous LLM processing, TTS audio generation, Video/OCR pipelines, file chunking.
+- Queueing: Redis-backed BullMQ streams.
+- Idempotency & Failure modes: Job ID deduplication; auto-retry exponential backoff up to 3 times before moving to Dead Letter Queue (DLQ).
+
+Databases and storage
+- Schemas summary: User table, Auth credentials, Conversation thread mappings, System logs.
+- Retention: Hot data retained for 90 days, cold storage archived via chron.
+- Backups: Automated daily snapshots for Postgres via pg_dump.
+
+Vector store and embeddings
+- Storage: Milvus or pgvector table storing document chunks and session vectors.
+- Indexing: HNSW (Hierarchical Navigable Small World) index for fast approximate nearest neighbor search.
+- Retrieval strategy: Cosine similarity matching, re-ranking before injecting into context window.
+
+ML components
+- LLM orchestration: Langchain/LlamaIndex routing queries. Main text model: Gemini Pro/Claude 3.5 Sonnet.
+- TTS: ElevenLabs or Google Cloud TTS for voice output.
+- OCR/Vision: Gemini Pro Vision.
+- Speaker verification: Pyannote/Resemblyzer-based embeddings check for identity verification.
+
+Infra
+- Reverse proxy & TLS: Nginx with Let's Encrypt managed certificates.
+- Monitoring & Logging: Prometheus/Grafana or Datadog for infra. ELK stack or Loki for structured logs.
+- Secrets management: Vault/AWS Secrets Manager to inject environment variables securely decoupled from code.
+
+CI/CD
+- Pipelines: GitHub Actions triggering lints, unit tests, E2E tests.
+- Triggers: Push to main => staging deploy. Tag release => prod deploy.
+- Artifact registry: Docker Hub or GCP Artifact Registry.
+
+Observability
+- Metrics: Throughput latency per LLM call, endpoint RPS, redis queue depth.
+- Logs & Tracing: OpenTelemetry spans injected into API request boundaries. Alerting mapped to queue depth anomalies and 5xx frequency spikes.
+
+Security
+- Auth: JWT-based stateless auth for API Gateway, HttpOnly secure cookies for clients.
+- RBAC: Scopes bound to tokens: user vs admin endpoints.
+- Encryption & Hardening: KMS envelope encryption for sensitive variables at rest. 
+
+Acceptance Checklist for Section 4:
+[ ] Frontend responsibilities, flows, offline/security are defined.
+[ ] Backend endpoints, protocols, versioning, error models are covered.
+[ ] Worker services tasks, queueing, idempotency covered.
+[ ] Databases schemas, retention, backup, vector storage strategies defined.
+[ ] ML components models, LLM orchestration covered.
+[ ] Infra proxy, TLS, monitoring, secrets, CI/CD, Observability, Security listed.
+
+Reviewer Sign-off (Section 4):
+------------------------------
 Reviewer Name: 
 Timestamp (UTC): 
 Status: [PENDING] (Awaiting 'ACCEPTED')

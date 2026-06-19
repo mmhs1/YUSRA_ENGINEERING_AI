@@ -8,7 +8,7 @@ import { useLoading } from './context/LoadingContext';
 import { SkeletonLoader } from './components/SkeletonLoader';
 import { AIResponse } from './components/AIResponse';
 import { useDarkMode } from './hooks/useDarkMode';
-import { Sparkles, Send, Moon, Sun, Clock, TerminalSquare, Trash2, Download, FileText, Search, Mic, MicOff } from 'lucide-react';
+import { Sparkles, Send, Moon, Sun, Clock, TerminalSquare, Trash2, Download, FileText, Search, Mic, MicOff, Bookmark, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { getReadingTime } from './utils/readingTime';
 import { jsPDF } from 'jspdf';
@@ -37,6 +37,9 @@ export default function App() {
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [currentResult, setCurrentResult] = useState<string | null>(null);
   const [showTemplates, setShowTemplates] = useState(false);
+  const [sessionInteractions, setSessionInteractions] = useState(0);
+  const [autoCopy, setAutoCopy] = useState(false);
+  const [quickPresets, setQuickPresets] = useState<string[]>([]);
 
   const { isListening, transcript, toggleListening, error, setTranscript } = useSpeechToText();
 
@@ -66,10 +69,15 @@ export default function App() {
     // Simulate AI API delay
     await new Promise(resolve => setTimeout(resolve, 2000));
 
-    const simulatedResponse = `Analyzing prompt: "${currentPrompt}"\n\nThis is a simulated AI response tailored to your query. Data processing modules indicate that incorporating a cohesive layout with dark mode significantly enhances developer ergonomics and user satisfaction.`;
+    const simulatedResponse = `Analyzing prompt: "${currentPrompt}"\n\nThis is a simulated **AI response** tailored to your query.\n\n### Formatted output\nData processing modules indicate:\n1. Cohesive layout\n2. Dark mode enhances ergonomics\n\n\`\`\`javascript\nconsole.log("Hello Output");\n\`\`\``;
     
     setIsLoading(false);
     playPing();
+    setSessionInteractions(prev => prev + 1);
+
+    if (autoCopy) {
+      navigator.clipboard.writeText(simulatedResponse).catch(() => {});
+    }
     
     setHistory(prev => {
       return [{ prompt: currentPrompt, response: simulatedResponse }, ...prev];
@@ -148,21 +156,58 @@ export default function App() {
       />
       
       {/* Sidebar */}
-      <aside className="w-64 border-r border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 flex flex-col hidden md:flex">
-        <div className="p-4 border-b border-neutral-200 dark:border-neutral-800 flex items-center gap-2 font-medium">
-          <TerminalSquare className="w-5 h-5 text-neutral-500" />
-          <span>AI Processor</span>
-        </div>
-        <div className="flex-1 overflow-y-auto p-4">
-          <div className="flex items-center gap-2 mb-4 text-xs font-semibold text-neutral-500 uppercase tracking-wider">
-            <Clock className="w-3 h-3" />
-            <span>Recent History</span>
+      <aside className="w-64 border-r border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 flex flex-col hidden md:flex shrink-0">
+        <div className="p-4 border-b border-neutral-200 dark:border-neutral-800 flex items-center justify-between font-medium shrink-0">
+          <div className="flex items-center gap-2">
+            <TerminalSquare className="w-5 h-5 text-neutral-500" />
+            <span>AI Processor</span>
           </div>
-          <div className="space-y-2">
-            {history.length === 0 ? (
-              <p className="text-sm text-neutral-500 dark:text-neutral-500 italic">No history yet.</p>
-            ) : (
-              history.map((item, index) => (
+          <span className="text-xs font-mono bg-neutral-100 dark:bg-neutral-800 px-2 py-0.5 rounded text-neutral-500" title="Total interactions this session">
+            {sessionInteractions}
+          </span>
+        </div>
+        <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-6">
+          <div>
+            <div className="flex items-center gap-2 mb-3 text-xs font-semibold text-neutral-500 uppercase tracking-wider">
+              <Bookmark className="w-3 h-3" />
+              <span>Quick Presets</span>
+            </div>
+            <div className="space-y-2">
+              {quickPresets.length === 0 ? (
+                <p className="text-xs text-neutral-500 dark:text-neutral-500 italic">No presets saved.</p>
+              ) : (
+                quickPresets.map((preset, index) => (
+                  <div key={index} className="flex gap-1">
+                    <button
+                      onClick={() => setPrompt(preset)}
+                      className="flex-1 text-left p-2 rounded-lg text-xs bg-neutral-50 hover:bg-neutral-100 dark:bg-neutral-900 dark:hover:bg-neutral-800 transition-colors border border-transparent hover:border-neutral-200 dark:hover:border-neutral-700 truncate"
+                      title={preset}
+                    >
+                      {preset}
+                    </button>
+                    <button 
+                      onClick={() => setQuickPresets(p => p.filter((_, i) => i !== index))} 
+                      className="p-1.5 text-neutral-400 hover:text-red-500 transition-colors rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20"
+                      title="Remove preset"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          <div>
+            <div className="flex items-center gap-2 mb-3 text-xs font-semibold text-neutral-500 uppercase tracking-wider">
+              <Clock className="w-3 h-3" />
+              <span>Recent History</span>
+            </div>
+            <div className="space-y-2">
+              {history.length === 0 ? (
+                <p className="text-sm text-neutral-500 dark:text-neutral-500 italic">No history yet.</p>
+              ) : (
+                history.map((item, index) => (
                 <button
                   key={index}
                   onClick={() => selectHistory(item)}
@@ -178,8 +223,18 @@ export default function App() {
               ))
             )}
           </div>
+          </div>
         </div>
-        <div className="p-4 border-t border-neutral-200 dark:border-neutral-800 flex flex-col gap-2">
+        <div className="p-4 border-t border-neutral-200 dark:border-neutral-800 flex flex-col gap-2 shrink-0">
+          <label className="flex items-center justify-between p-2 mb-2 rounded-lg cursor-pointer transition-colors border border-transparent">
+            <span className="text-xs font-medium text-neutral-600 dark:text-neutral-300 select-none">Auto-copy response</span>
+            <input 
+              type="checkbox" 
+              checked={autoCopy}
+              onChange={(e) => setAutoCopy(e.target.checked)}
+              className="appearance-none w-8 h-4 bg-neutral-200 dark:bg-neutral-700 rounded-full checked:bg-neutral-900 dark:checked:bg-indigo-500 transition-colors relative after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:w-3 after:h-3 after:bg-white after:rounded-full after:transition-transform checked:after:translate-x-4 cursor-pointer"
+            />
+          </label>
           <button
             onClick={downloadPdfHistory}
             disabled={history.length === 0}
@@ -318,9 +373,24 @@ export default function App() {
               disabled={isLoading}
               className="w-full py-4 pl-12 pr-24 rounded-2xl bg-transparent outline-none text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 disabled:opacity-50"
             />
-            {/* Character Count */}
-            <div className="absolute right-14 top-1/2 -translate-y-1/2 text-xs text-neutral-400 font-mono pointer-events-none">
-              {prompt.length}/{MAX_CHARS}
+            {/* Character Count & Save */}
+            <div className="absolute right-14 top-1/2 -translate-y-1/2 flex items-center gap-2">
+              <span className="text-xs text-neutral-400 font-mono pointer-events-none">
+                {prompt.length}/{MAX_CHARS}
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  if (prompt.trim() && !quickPresets.includes(prompt.trim())) {
+                    setQuickPresets(p => [...p, prompt.trim()]);
+                  }
+                }}
+                disabled={!prompt.trim()}
+                className="p-1.5 text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100 disabled:opacity-50 transition-colors"
+                title="Save as Preset"
+              >
+                <Bookmark className="w-4 h-4" />
+              </button>
             </div>
 
             <button

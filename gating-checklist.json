@@ -39,16 +39,53 @@
     {
       "id": "3",
       "title": "High-level architecture diagram (textual + component list)",
-      "status": "pending",
+      "status": "accepted",
       "checklist": [
         {
           "id": "3.1",
           "item": "Single-line ASCII/text diagram showing components and data flows.",
-          "passed": false
+          "passed": true
         },
         {
           "id": "3.2",
           "item": "Short responsibility statement for each component.",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "id": "4",
+      "title": "Component inventory (detailed)",
+      "status": "pending",
+      "checklist": [
+        {
+          "id": "4.1",
+          "item": "Frontend components with responsibilities, pages, UX flows offline behavior, etc.",
+          "passed": false
+        },
+        {
+          "id": "4.2",
+          "item": "Backend endpoints, protocols, versioning, error model.",
+          "passed": false
+        },
+        {
+          "id": "4.3",
+          "item": "Worker services tasks, queueing, idempotency.",
+          "passed": false
+        },
+        {
+          "id": "4.4",
+          "item": "Databases schema summary, vector store storage strategy.",
+          "passed": false
+        },
+        {
+          "id": "4.5",
+          "item": "ML components, LLM orchestration, model selection.",
+          "passed": false
+        },
+        {
+          "id": "4.6",
+          "item": "Infra (proxy, TLS, monitoring), CI/CD pipelines, Observability, Security.",
           "passed": false
         }
       ]

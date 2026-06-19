@@ -2,6 +2,8 @@ import { Sparkles, Copy, Check, Clock, ChevronDown, ChevronUp, BotMessageSquare 
 import { motion, AnimatePresence } from 'motion/react';
 import { useState } from 'react';
 import { getReadingTime } from '../utils/readingTime';
+import Markdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 interface AIResponseProps {
   response: string;
@@ -15,21 +17,6 @@ export function AIResponse({ response }: AIResponseProps) {
     navigator.clipboard.writeText(response);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
-  };
-
-  const tokens = response.split(/(\s+)/);
-
-  const container = {
-    hidden: { opacity: 0 },
-    visible: { 
-      opacity: 1, 
-      transition: { staggerChildren: 0.02 } 
-    }
-  };
-
-  const item = {
-    hidden: { opacity: 0, y: 5 },
-    visible: { opacity: 1, y: 0 }
   };
 
   const readingTime = getReadingTime(response);
@@ -73,23 +60,15 @@ export function AIResponse({ response }: AIResponseProps) {
                 exit={{ height: 0, opacity: 0 }}
                 className="overflow-hidden"
               >
-                <motion.p 
-                  variants={container}
-                  initial="hidden"
-                  animate="visible"
-                  className="text-neutral-600 dark:text-neutral-300 leading-relaxed whitespace-pre-wrap py-1"
+                <motion.div 
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1, transition: { duration: 0.5 } }}
+                  className="text-neutral-600 dark:text-neutral-300 leading-relaxed py-1"
                 >
-                  {tokens.map((token, i) => {
-                    if (/\s+/.test(token)) {
-                      return String(token);
-                    }
-                    return (
-                      <motion.span key={i} variants={item} className="inline-block">
-                        {token}
-                      </motion.span>
-                    );
-                  })}
-                </motion.p>
+                  <div className="markdown-body prose dark:prose-invert max-w-none">
+                    <Markdown remarkPlugins={[remarkGfm]}>{response}</Markdown>
+                  </div>
+                </motion.div>
               </motion.div>
             )}
           </AnimatePresence>
