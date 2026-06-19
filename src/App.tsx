@@ -8,8 +8,11 @@ import { useLoading } from './context/LoadingContext';
 import { SkeletonLoader } from './components/SkeletonLoader';
 import { AIResponse } from './components/AIResponse';
 import { useDarkMode } from './hooks/useDarkMode';
-import { Sparkles, Send, Moon, Sun, Clock, TerminalSquare, Trash2, Download } from 'lucide-react';
+import { Sparkles, Send, Moon, Sun, Clock, TerminalSquare, Trash2, Download, FileText } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { getReadingTime } from './utils/readingTime';
+import { jsPDF } from 'jspdf';
+import { IntroModal } from './components/IntroModal';
 
 interface HistoryItem {
   prompt: string;
@@ -83,8 +86,39 @@ export default function App() {
     downloadAnchorNode.remove();
   };
 
+  const downloadPdfHistory = () => {
+    if (history.length === 0) return;
+    const doc = new jsPDF();
+    let y = 15;
+    
+    doc.setFontSize(16);
+    doc.text("AI Assistant History", 15, y);
+    y += 15;
+    
+    doc.setFontSize(12);
+
+    history.slice().reverse().forEach((item, index) => {
+      // Check for page break
+      if (y > 270) {
+        doc.addPage();
+        y = 15;
+      }
+      
+      const splitPrompt = doc.splitTextToSize(`Prompt: ${item.prompt}`, 180);
+      doc.text(splitPrompt, 15, y);
+      y += splitPrompt.length * 7 + 5;
+
+      const splitResponse = doc.splitTextToSize(`Response: ${item.response}`, 180);
+      doc.text(splitResponse, 15, y);
+      y += splitResponse.length * 7 + 10;
+    });
+
+    doc.save("ai_history.pdf");
+  };
+
   return (
     <div className="flex h-screen bg-neutral-50 dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 font-sans transition-colors duration-200 selection:bg-neutral-200 dark:selection:bg-neutral-700">
+      <IntroModal />
       
       {/* Sidebar */}
       <aside className="w-64 border-r border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 flex flex-col hidden md:flex">
@@ -105,16 +139,28 @@ export default function App() {
                 <button
                   key={index}
                   onClick={() => selectHistory(item)}
-                  className="w-full text-left p-3 rounded-lg text-sm bg-neutral-50 hover:bg-neutral-100 dark:bg-neutral-900 dark:hover:bg-neutral-800 transition-colors truncate border border-transparent hover:border-neutral-200 dark:hover:border-neutral-700"
+                  className="w-full text-left p-3 rounded-lg text-sm bg-neutral-50 hover:bg-neutral-100 dark:bg-neutral-900 dark:hover:bg-neutral-800 transition-colors border border-transparent hover:border-neutral-200 dark:hover:border-neutral-700 flex flex-col gap-1.5"
                   title={item.prompt}
                 >
-                  {item.prompt}
+                  <span className="truncate w-full block font-medium text-neutral-800 dark:text-neutral-200">{item.prompt}</span>
+                  <div className="flex items-center gap-1.5 text-xs text-neutral-500 dark:text-neutral-400">
+                    <Clock className="w-3 h-3" />
+                    <span>{getReadingTime(item.response)}</span>
+                  </div>
                 </button>
               ))
             )}
           </div>
         </div>
         <div className="p-4 border-t border-neutral-200 dark:border-neutral-800 flex flex-col gap-2">
+          <button
+            onClick={downloadPdfHistory}
+            disabled={history.length === 0}
+            className="w-full flex items-center justify-center gap-2 py-2 px-3 text-sm font-medium rounded-lg text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <FileText className="w-4 h-4" />
+            Export to PDF
+          </button>
           <button
             onClick={downloadHistory}
             disabled={history.length === 0}

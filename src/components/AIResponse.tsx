@@ -1,6 +1,7 @@
-import { Sparkles, Copy, Check } from 'lucide-react';
+import { Sparkles, Copy, Check, Clock } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useState } from 'react';
+import { getReadingTime } from '../utils/readingTime';
 
 interface AIResponseProps {
   response: string;
@@ -30,11 +31,13 @@ export function AIResponse({ response }: AIResponseProps) {
     visible: { opacity: 1, y: 0 }
   };
 
+  const readingTime = getReadingTime(response);
+
   return (
     <motion.div 
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="w-full max-w-2xl p-6 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl shadow-sm relative group"
+      className="w-full max-w-2xl p-6 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl shadow-sm relative group mt-4 flex flex-col"
     >
       <button 
         onClick={handleCopy}
@@ -44,12 +47,14 @@ export function AIResponse({ response }: AIResponseProps) {
         {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
       </button>
 
-      <div className="flex items-start gap-4">
+      <div className="flex items-start gap-4 flex-1">
         <div className="w-10 h-10 rounded-full bg-neutral-900 dark:bg-neutral-100 flex items-center justify-center shrink-0">
           <Sparkles className="w-5 h-5 text-white dark:text-neutral-900" />
         </div>
         <div className="pt-2 border-b border-transparent w-full">
-          <h3 className="font-medium mb-2 leading-none dark:text-neutral-100">AI Assistant</h3>
+          <div className="flex items-center gap-3 mb-2">
+            <h3 className="font-medium leading-none dark:text-neutral-100">AI Assistant</h3>
+          </div>
           <motion.p 
             variants={container}
             initial="hidden"
@@ -68,6 +73,11 @@ export function AIResponse({ response }: AIResponseProps) {
             })}
           </motion.p>
         </div>
+      </div>
+      
+      <div className="border-t border-neutral-100 dark:border-neutral-700 mt-4 pt-3 flex items-center gap-1.5 text-xs text-neutral-400 dark:text-neutral-500 ml-[56px]">
+        <Clock className="w-3.5 h-3.5" />
+        <span>{readingTime}</span>
       </div>
     </motion.div>
   );
